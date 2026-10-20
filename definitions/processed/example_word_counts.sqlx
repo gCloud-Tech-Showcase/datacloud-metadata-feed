@@ -2,7 +2,7 @@ config {
   type: "view",
   schema: "processed",
   description: "PROCESSED: EXAMPLE — cleansed word counts from the public Shakespeare sample",
-  tags: ["__DOMAIN_TAG__", "processed", "staging"],
+  tags: ["metadata_feed", "processed", "staging"],
   columns: {
     word: "The word, lowercased",
     corpus: "Which work the word appeared in",

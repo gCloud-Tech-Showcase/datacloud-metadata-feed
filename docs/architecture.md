@@ -1,11 +1,11 @@
-# __DOMAIN_TITLE__ Architecture
+# Schema Drift Alerts with Metadata Change Feeds Architecture
 
 <!-- SKELETON: replace. Cover the pipeline flow (a mermaid graph works well),
      a Key Components table mapping dataset -> object -> purpose, and any
      model/endpoint notes. See the churn or feedback domain for a worked
      example of the shape. -->
 
-Datasets follow semantic medallion stages — the domain (`__DOMAIN_TAG__`) is a
+Datasets follow semantic medallion stages — the domain (`metadata_feed`) is a
 Dataform tag, not a dataset.
 
 ## Key components

@@ -46,14 +46,4 @@ output "dataform_workflow_config_name" {
   value       = one(google_dataform_repository_workflow_config.main[*].name)
 }
 
-# [addon:unstructured]
-output "multimodal_data_bucket" {
-  description = "The GCS bucket holding the files backing the object table"
-  value       = google_storage_bucket.multimodal_data.name
-}
 
-# [addon:unstructured]
-output "vertex_ai_connection_id" {
-  description = "The BigQuery connection used for Gemini + BigLake"
-  value       = google_bigquery_connection.vertex_ai.id
-}

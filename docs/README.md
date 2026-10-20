@@ -1,4 +1,4 @@
-# __DOMAIN_TITLE__ — docs
+# Schema Drift Alerts with Metadata Change Feeds — docs
 
 <!-- SKELETON. The domain repos use a small, consistent set:
        architecture.md   data flow, stage layout, key components

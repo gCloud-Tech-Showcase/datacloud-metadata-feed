@@ -17,7 +17,7 @@
 # =============================================================================
 
 locals {
-  dataform_repository_name = "__REPO_NAME__"
+  dataform_repository_name = "datacloud-metadata-feed"
 }
 
 # -----------------------------------------------------------------------------
@@ -112,8 +112,7 @@ resource "google_dataform_repository_release_config" "main" {
   }
 
   depends_on = [
-    terraform_data.repository,       # [visibility:public]
-    google_dataform_repository.this, # [visibility:private]
+    terraform_data.repository, # [visibility:public]
   ]
 }
 
@@ -172,15 +171,11 @@ resource "terraform_data" "run_pipeline" {
   # the connection-admin edge ML.GENERATE_TEXT fails on a missing delegate
   # permission — and IAM propagation makes both look like flaky races.
   depends_on = [
-    terraform_data.repository,       # [visibility:public]
-    google_dataform_repository.this, # [visibility:private]
+    terraform_data.repository, # [visibility:public]
     google_service_account_iam_member.dataform_impersonate_runner,
     google_project_iam_member.runner_bq_job_user,
     google_project_iam_member.runner_bq_data_editor,
     google_project_iam_member.runner_vertex_ai_user,
-    # __ADDON_PIPELINE_DEPS__
-    terraform_data.seed_data,
-    google_bigquery_connection_iam_member.runner_connection_admin,
   ]
 
   provisioner "local-exec" {

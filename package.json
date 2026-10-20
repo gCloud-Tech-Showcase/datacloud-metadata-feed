@@ -1,5 +1,5 @@
 {
-  "name": "__REPO_NAME__",
+  "name": "datacloud-metadata-feed",
   "dependencies": {
     "@dataform/core": "3.0.0"
   }

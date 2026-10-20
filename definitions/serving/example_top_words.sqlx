@@ -2,7 +2,7 @@ config {
   type: "table",
   schema: "serving",
   description: "SERVING: EXAMPLE — most frequent words across the Shakespeare corpus",
-  tags: ["__DOMAIN_TAG__", "serving", "marts"],
+  tags: ["metadata_feed", "serving", "marts"],
   columns: {
     word: "The word, lowercased",
     total_occurrences: "Occurrences across every work",

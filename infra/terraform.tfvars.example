@@ -4,10 +4,10 @@
 
 # --- Optional overrides (defaults shown) ---
 
-# project_id       = "__PROJECT_ID__"
+# project_id       = "datacloud-metadata-feed"
 # region           = "us-central1"
 # dataset_location = "US"
-# git_repo_url     = "https://github.com/__GITHUB_ORG__/__REPO_NAME__.git"
+# git_repo_url     = "https://github.com/gCloud-Tech-Showcase/datacloud-metadata-feed.git"
 
 # Run the Dataform pipeline as the final step of apply (blocks ~2-4 min until it
 # finishes). Needs curl + python3 (bundled with gcloud). Set false to skip.

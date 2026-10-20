@@ -2,7 +2,7 @@ config {
   type: "view",
   schema: "assertions",
   description: "QUALITY: EXAMPLE — words appearing in only one work; expected to be non-empty, watch the trend",
-  tags: ["__DOMAIN_TAG__", "monitoring", "quality"],
+  tags: ["metadata_feed", "monitoring", "quality"],
   columns: {
     word: "The word",
     total_occurrences: "Occurrences across the corpus",

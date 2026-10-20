@@ -1,7 +1,7 @@
 config {
   type: "assertion",
   description: "QUALITY: EXAMPLE — serving rows must have a unique word and sane counts",
-  tags: ["__DOMAIN_TAG__", "assertions", "quality"]
+  tags: ["metadata_feed", "assertions", "quality"]
 }
 
 /*

@@ -1,4 +1,4 @@
-defaultProject: __PROJECT_ID__
+defaultProject: datacloud-metadata-feed
 defaultLocation: US
 defaultDataset: serving
 # NOT `assertionSchema` — the WorkflowSettings proto rejects that name.

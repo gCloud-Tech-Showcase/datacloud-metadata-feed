@@ -1,11 +1,11 @@
-# __REPO_NAME__
+# datacloud-metadata-feed
 
 <!-- SKELETON: the structure below is the convention; replace the content.
      Keep this operational — how to stand the domain up, what the tables are,
      how to verify, and the traps specific to THIS pipeline. Engineering
      standards do not belong here; they live in the user-level agent toolkit. -->
 
-Standalone domain: __DOMAIN_TITLE__. <!-- one or two lines: what it does,
+Standalone domain: Schema Drift Alerts with Metadata Change Feeds. <!-- one or two lines: what it does,
 which Google Cloud products, and where the data comes from. -->
 
 ## Standing it up
@@ -29,7 +29,7 @@ and the state bucket. Don't hardcode it anywhere else.
 
 ## Data model
 
-Datasets are named for the **medallion stage**; the domain (`__DOMAIN_TAG__`)
+Datasets are named for the **medallion stage**; the domain (`metadata_feed`)
 is a Dataform tag, never a dataset or a table prefix.
 
 | Dataset | Object | What |
@@ -78,7 +78,7 @@ cd infra && tofu destroy
 
 Removes the domain including dataset contents. Deliberately **not** removed,
 because Tofu didn't create them: the project and the state bucket
-(`gs://__PROJECT_ID__-tfstate`) — destroying the bucket holding the state
+(`gs://datacloud-metadata-feed-tfstate`) — destroying the bucket holding the state
 mid-destroy would be self-defeating.
 
 ## More

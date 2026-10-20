@@ -1,6 +1,6 @@
 # =============================================================================
 # ENABLED APIS
-# Only the services the __DOMAIN_SLUG__ domain actually uses. Lines carrying an
+# Only the services the metadata-feed domain actually uses. Lines carrying an
 # [addon:*] tag belong to the GCS + BigLake + Gemini add-on — they go along with
 # storage.tf / seed.tf / scripts/ / data/ if it's unused. Lines carrying a
 # [visibility:*] tag belong to one of the two Dataform git-link paths; init.sh
@@ -26,10 +26,7 @@ resource "google_project_service" "apis" {
     # and for any Gemini call from BigQuery. Keep unless the domain is pure SQL.
     "aiplatform.googleapis.com",
 
-    "secretmanager.googleapis.com", # [visibility:private] holds Dataform's SSH deploy key
 
-    "bigqueryconnection.googleapis.com", # [addon:unstructured] BQ -> Vertex/GCS connection
-    "storage.googleapis.com",            # [addon:unstructured] bucket backing the object table
   ])
 
   service = each.value
