@@ -1,0 +1,5 @@
+defaultProject: __PROJECT_ID__
+defaultLocation: US
+defaultDataset: serving
+# NOT `assertionSchema` — the WorkflowSettings proto rejects that name.
+defaultAssertionDataset: assertions

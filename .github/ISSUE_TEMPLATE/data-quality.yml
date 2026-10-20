@@ -1,0 +1,36 @@
+name: Data quality
+description: Data that's wrong, missing, or inconsistent while the pipeline itself runs fine.
+title: "[Data quality] "
+labels: ["type:data-quality"]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: What does the data show?
+      description: The query you ran and what came back.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should it show?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: How many rows, and which?
+      description: Isolated records or systemic? Include a count if you have one.
+    validations:
+      required: false
+  - type: dropdown
+    id: coverage
+    attributes:
+      label: Is there a check for this?
+      options:
+        - "No — nothing would catch it"
+        - "Yes — an assertion exists and passed anyway"
+        - "Yes — a monitoring view shows it"
+        - "Not sure"
+    validations:
+      required: false

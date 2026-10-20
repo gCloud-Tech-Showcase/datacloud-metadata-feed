@@ -1,0 +1,29 @@
+# --- OpenTofu / Terraform ---
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+
+# --- Node / Dataform ---
+node_modules/
+.df/
+
+# --- Credentials / secrets ---
+*.json
+!package.json
+!package-lock.json
+*.env
+.env
+
+# --- direnv ---
+.envrc
+.direnv/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store

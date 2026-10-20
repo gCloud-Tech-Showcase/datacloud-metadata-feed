@@ -1,0 +1,18 @@
+name: Chore
+description: Cleanup, refactor, dependency bump, infra hygiene.
+title: "[Chore] "
+labels: ["type:chore"]
+body:
+  - type: textarea
+    id: cost
+    attributes:
+      label: What's it costing?
+      description: Time, blast radius, or debt accumulating.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Smallest meaningful scope
+    validations:
+      required: false

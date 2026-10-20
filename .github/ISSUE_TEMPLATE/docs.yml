@@ -1,0 +1,25 @@
+name: Docs
+description: Documentation-only addition or correction.
+title: "[Docs] "
+labels: ["type:docs"]
+body:
+  - type: textarea
+    id: confusing
+    attributes:
+      label: What's confusing or missing, and for whom?
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Which file(s)?
+      description: Or where it would live if it doesn't exist yet.
+    validations:
+      required: false
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Missing, or just hard to find?
+      options: ["Missing entirely", "Exists but undiscoverable", "Exists but wrong/stale"]
+    validations:
+      required: false

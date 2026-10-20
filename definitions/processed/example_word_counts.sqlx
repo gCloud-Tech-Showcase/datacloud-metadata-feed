@@ -1,0 +1,28 @@
+config {
+  type: "view",
+  schema: "processed",
+  description: "PROCESSED: EXAMPLE — cleansed word counts from the public Shakespeare sample",
+  tags: ["__DOMAIN_TAG__", "processed", "staging"],
+  columns: {
+    word: "The word, lowercased",
+    corpus: "Which work the word appeared in",
+    word_count: "Occurrences of the word in that work"
+  }
+}
+
+/*
+  EXAMPLE — delete once your own processed stage exists.
+
+  `view` is the default choice: cheap to recompute, always current. Reach for
+  `table` only when recomputation is expensive, and `incremental` when the cost
+  is PER ROW (any model call).
+*/
+
+SELECT
+  LOWER(word)              AS word,
+  corpus,
+  SAFE_CAST(word_count AS INT64) AS word_count
+FROM ${ref("shakespeare")}
+WHERE word_count IS NOT NULL
+  -- Drop single characters; they're mostly punctuation artifacts.
+  AND LENGTH(word) > 1

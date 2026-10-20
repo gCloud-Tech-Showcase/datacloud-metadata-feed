@@ -1,0 +1,24 @@
+name: Feature request
+description: New capability, new data, or new behaviour the domain should have.
+title: "[Feature] "
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What need does this serve?
+      description: For whom, and what do they do today without it?
+    validations:
+      required: true
+  - type: textarea
+    id: good_enough
+    attributes:
+      label: What does "good enough" look like?
+    validations:
+      required: true
+  - type: textarea
+    id: not_in_scope
+    attributes:
+      label: What's adjacent but NOT in scope?
+    validations:
+      required: false
