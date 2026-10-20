@@ -1,11 +1,6 @@
 # =============================================================================
 # ENABLED APIS
-# Only the services the metadata-feed domain actually uses. Lines carrying an
-# [addon:*] tag belong to the GCS + BigLake + Gemini add-on — they go along with
-# storage.tf / seed.tf / scripts/ / data/ if it's unused. Lines carrying a
-# [visibility:*] tag belong to one of the two Dataform git-link paths; init.sh
-# keeps whichever matches the repo. (Wildcards, so init.sh doesn't strip these
-# lines as tags in their own right.)
+# Only the services the metadata-feed domain actually uses.
 # =============================================================================
 
 resource "google_project_service" "apis" {
@@ -16,17 +11,16 @@ resource "google_project_service" "apis" {
     "cloudresourcemanager.googleapis.com", # provider manages google_project_service via CRM
     "serviceusage.googleapis.com",         # enable/disable of the services below
 
-    "bigquery.googleapis.com",       # queries, tables, models
-    "dataform.googleapis.com",       # managed git-linked Dataform repository
-    "iam.googleapis.com",            # execution service account
-    "iamcredentials.googleapis.com", # service-account impersonation (Dataform act-as runner)
-    "datalineage.googleapis.com",    # automatic BigQuery/Dataform data lineage capture
-
-    # Needed for BQML models registered in Vertex (model_registry='vertex_ai'),
-    # and for any Gemini call from BigQuery. Keep unless the domain is pure SQL.
-    "aiplatform.googleapis.com",
-
-
+    "bigquery.googleapis.com",         # source copies, golden tables, view, readiness log
+    "dataplex.googleapis.com",         # Knowledge Catalog: aspects, data product, metadata feeds
+    "pubsub.googleapis.com",           # feed topics, push and demo subscriptions
+    "cloudfunctions.googleapis.com",   # check-contract and rollup-product
+    "run.googleapis.com",              # Cloud Functions Gen2 run on Cloud Run
+    "cloudbuild.googleapis.com",       # builds the function containers
+    "artifactregistry.googleapis.com", # stores the function containers
+    "storage.googleapis.com",          # function source bucket
+    "iam.googleapis.com",              # function and invoker service accounts
+    "cloudaicompanion.googleapis.com", # Gemini for Google Cloud, used by the insights scans
   ])
 
   service = each.value

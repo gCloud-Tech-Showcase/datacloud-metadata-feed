@@ -15,6 +15,18 @@ terraform {
       source  = "hashicorp/google-beta"
       version = ">= 6.50.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = ">= 2.4.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.6.0"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.11.0"
+    }
   }
 
   # State lives in gs://<project_id>-tfstate (versioned, private). The bucket is

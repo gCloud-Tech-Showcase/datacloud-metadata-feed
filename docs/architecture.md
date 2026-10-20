@@ -1,22 +1,81 @@
-# Schema Drift Alerts with Metadata Change Feeds Architecture
+# Architecture
 
-<!-- SKELETON: replace. Cover the pipeline flow (a mermaid graph works well),
-     a Key Components table mapping dataset -> object -> purpose, and any
-     model/endpoint notes. See the churn or feedback domain for a worked
-     example of the shape. -->
+## Data flow
 
-Datasets follow semantic medallion stages — the domain (`metadata_feed`) is a
-Dataform tag, not a dataset.
+```mermaid
+sequenceDiagram
+    participant TF as tofu apply
+    participant BQ as BigQuery
+    participant KC as Knowledge Catalog
+    participant F1 as Feed: schema-changes
+    participant CC as check-contract
+    participant F2 as Feed: readiness-changes
+    participant RP as rollup-product
 
-## Key components
+    TF->>BQ: query job overwrites sales.orders (new schema)
+    BQ->>KC: entry UPDATE (schema aspect refreshed)
+    KC->>F1: message (entry name, changed aspect types)
+    F1->>CC: Pub/Sub push
+    CC->>KC: GetEntry (schema + schema-contract)
+    CC->>KC: write asset-readiness = BLOCKED
+    KC->>F2: message (asset-readiness changed)
+    F2->>RP: Pub/Sub push
+    RP->>KC: list data products and their assets
+    RP->>KC: read asset-readiness of every asset
+    RP->>KC: write product-readiness = BLOCKED
+```
 
-| Stage | Object | Purpose |
+Both functions append each status change to `contract_monitoring.readiness_log`. The view `contract_monitoring.current_readiness` shows the latest row per asset and per data product.
+
+## Components
+
+| Component | Defined in | Purpose |
 | --- | --- | --- |
-| | | |
+| `raw.thelook_orders`, `raw.thelook_users` | `infra/source_data.tf` | Cross-region copies of theLook eCommerce |
+| `sales.orders`, `sales.customers` | `infra/data_product.tf` | Golden tables, built by query jobs |
+| `marketing.customer_orders` | `infra/data_product.tf` | Consumer view over the golden tables |
+| Sales Orders data product | `infra/data_product.tf` | Groups the three assets |
+| Aspect types and contracts | `infra/contracts.tf` | `schema-contract`, `asset-readiness`, `product-readiness` |
+| Feeds, topics, subscriptions | `infra/feeds.tf` | Two feeds, push and demo subscriptions, dead-letter topic |
+| Functions | `infra/functions.tf`, `infra/modules/function/`, `functions/` | `check-contract`, `rollup-product` |
+| Readiness history | `infra/monitoring.tf` | `readiness_log` table and `current_readiness` view |
+| Data scans | `infra/scans.tf` | Profile, quality and insights, published to each asset's entry |
 
-## Data quality
+## Design decisions
 
-| Folder | type | Semantics |
-| --- | --- | --- |
-| `assertions/` | `"assertion"` | Hard fail — returned rows fail the run |
-| `monitoring/` | `"view"` | Warning only — never blocks |
+| Decision | Reason |
+| --- | --- |
+| Compare against a contract, not the previous schema | The baseline is what producers and consumers agreed. Duplicate or out-of-order feed messages give the same result, because each run compares current state with the contract. |
+| Contract as an aspect on each asset | `check-contract` reads the live schema and the contract in one `GetEntry` call. The data product decides which assets are governed. |
+| Two readiness aspect types | The readiness feed watches `asset-readiness` only. If the roll-up wrote the same type, its own write would trigger the feed again. |
+| Golden objects built with `CREATE OR REPLACE TABLE … AS SELECT` and `CREATE OR REPLACE VIEW` | The catalog keeps the same entry, so the contract aspect survives a schema change. BigQuery records lineage for these statements, but not for a `SELECT` into a destination table or a view created through the API. A `google_bigquery_table` with a schema block is replaced on a dropped column, which deletes the entry. Any type change is allowed, not only widening. |
+| `bq` instead of `google_bigquery_job` | The provider returns as soon as a job is submitted, and a failed job still shows as created. `bq` waits and fails the apply. |
+| Scans run as `data-scanner` | A dedicated identity with read access to the two domain datasets only. |
+| Everything in `us-central1` | A data product and its assets must share a location. theLook is in the US multi-region, so its tables are copied first. |
+| No Dataform | Two tables and one view are not a pipeline. Keeping every change in Tofu makes the producer workflow one edit and one apply. |
+| Push subscriptions, not Eventarc triggers | A push subscription supports a dead-letter topic, so a failing function does not lose events silently. |
+| `-demo` pull subscriptions | A presenter can pull and ack messages without taking them away from the functions. |
+
+## Metadata change feed behaviour
+
+These are observed behaviours, verified on 2026-10-20. The code depends on them.
+
+| Behaviour | Consequence in this repo |
+| --- | --- |
+| Every BigQuery table update lists all system aspects in `updatedAspects`, including `schema`, even when the schema did not change. | `check-contract` always compares against the contract. A run with no differences writes nothing. |
+| A custom aspect update lists only that aspect. | The loop guard in `check-contract` ignores events without `schema` or `schema-contract`. |
+| The event's `entryName` is an opaque ID that `GetEntry` rejects. | The functions rebuild the entry name from `fullQualifiedName`. |
+| Filters on `projects/dataplex-types/...` were accepted but matched nothing. | Feed filters use the project-number form `projects/655216118709/...`. |
+| Creating a feed before the service agent's publisher grant propagates fails with `code 13`. | `time_sleep.dataplex_publisher_propagation` waits 90 seconds. |
+| API-created insights scans publish results, but the console's Insights tab stays empty until the table has `dataplex-data-documentation-published-*` labels. `CREATE OR REPLACE` drops labels. | Each `CREATE OR REPLACE` statement sets the labels in `OPTIONS`. |
+| A new feed can take up to 10 minutes to start publishing. | `time_sleep.feed_activation` delays the contracts on the first apply. |
+| Events in the US multi-region were not delivered for two views. | The demo runs in `us-central1`, where every test delivered. `verify.sh --smoke` fails if the path breaks. |
+
+## Failure modes and checks
+
+| Failure | Check |
+| --- | --- |
+| A data product asset has no contract | `rollup-product` blocks the product with "No schema contract has been checked for this asset." |
+| The feed matches nothing or stops delivering | `verify.sh --smoke` expects a throwaway table to become `BLOCKED` within 120 seconds |
+| A function fails repeatedly | After 5 attempts the message goes to `feed-dead-letter`. `verify.sh` fails if `feed-dead-letter-pull` is not empty. |
+| Status and reasons disagree | Both are written in one aspect update, so they cannot disagree |
