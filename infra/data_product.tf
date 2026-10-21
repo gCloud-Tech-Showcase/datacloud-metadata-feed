@@ -119,6 +119,22 @@ resource "google_dataplex_data_product" "sales_orders" {
     google_service_account.functions.email,
   )]
 
+  # Labels for routing notifications only. No access_group_configs are set on
+  # the data assets, so these groups are not granted any access to the tables.
+  dynamic "access_groups" {
+    for_each = var.data_product_access_groups
+    content {
+      id           = access_groups.key
+      group_id     = access_groups.key
+      display_name = access_groups.value.display_name
+      description  = access_groups.value.description
+
+      principal {
+        google_group = access_groups.value.google_group
+      }
+    }
+  }
+
   depends_on = [google_project_service.apis["dataplex.googleapis.com"]]
 }
 

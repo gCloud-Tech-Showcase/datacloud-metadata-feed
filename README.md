@@ -18,6 +18,8 @@ flowchart LR
     KC --> F2["Feed: readiness-changes"]
     F2 --> RP["rollup-product"]
     RP -->|"product-readiness"| DP["Data product entry"]
+    F2 --> NS["notify-stewards"]
+    NS --> NT["Topic: schema-change-notifications<br/>(recipient: the data product's steward group)"]
     CC --> LOG[("contract_monitoring<br/>readiness_log")]
     RP --> LOG
 ```
@@ -27,6 +29,14 @@ flowchart LR
 | `schema-contract` | Each asset | Tofu (`infra/contracts.tf`) | The agreed columns, types and modes, plus a version |
 | `asset-readiness` | Each asset | `check-contract` | `READY` or `BLOCKED`, and one reason per difference |
 | `product-readiness` | The data product | `rollup-product` | `BLOCKED` when any asset is not `READY`, and which asset |
+
+Every time the set of differences for an asset changes, `notify-stewards` publishes a notification for each data product that contains it. The message names the Google Group of the data product's `data-stewards` access group:
+
+| Severity | When | Asset readiness |
+| --- | --- | --- |
+| `BREAKING` | A column was dropped, retyped or changed mode | `BLOCKED` |
+| `REVIEW` | Only added columns: the contract is broken, nothing downstream breaks yet | `READY` |
+| `RESOLVED` | No differences left: the contract was revised or the change reverted | `READY` |
 
 | Change | Breaking? |
 | --- | --- |
@@ -52,6 +62,8 @@ flowchart LR
 ./infra/scripts/setup.sh   # one-time per project: APIs + state bucket + tofu init
 cd infra && tofu apply     # zero required variables
 ```
+
+Optional: to name real recipients in the notifications, copy `infra/terraform.tfvars.example` to `infra/terraform.tfvars` and point the data product's access groups at your own Google Groups. Without it, everything still works and notifications have no recipient.
 
 The first apply takes about 15 minutes. It waits 10 minutes for the new feeds to start publishing before it attaches the contracts, so the first evaluation is not lost.
 
@@ -85,7 +97,8 @@ The walkthrough is in [`docs/01-demo.md`](docs/01-demo.md). In short:
 | Aspect types | `schema-contract`, `asset-readiness`, `product-readiness` |
 | Metadata feeds | `schema-changes`, `readiness-changes` |
 | Pub/Sub | One topic per feed, a push subscription per function, a `-demo` pull subscription per feed, and a dead-letter topic |
-| Cloud Functions | `check-contract`, `rollup-product` (Python, scale to zero) |
+| Cloud Functions | `check-contract`, `rollup-product`, `notify-stewards` (Python, scale to zero) |
+| Notifications | `schema-change-notifications` topic with a `-demo` pull subscription, and `contract_monitoring.notification_log` |
 | Data scans | Profile, quality and insights on all three assets, published to the catalog |
 
 ## Cleanup

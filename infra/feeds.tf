@@ -4,7 +4,7 @@
 #   schema-changes     feed: schema or schema-contract changed on any entry
 #                      -> push to check-contract
 #   readiness-changes  feed: asset-readiness changed on any entry
-#                      -> push to rollup-product
+#                      -> push to rollup-product and to notify-stewards
 #
 # Each topic also has a `-demo` pull subscription that nothing consumes, so a
 # presenter can pull and ack messages without starving the functions.
@@ -25,14 +25,18 @@ locals {
         "${local.dataplex_types}/aspectTypes/schema",
         "${local.aspect_type_prefix}/${google_dataplex_aspect_type.schema_contract.aspect_type_id}",
       ]
-      push_endpoint = module.check_contract.uri
     }
 
     readiness-changes = {
-      description   = "Asset readiness changed on a catalog entry"
-      aspect_types  = ["${local.aspect_type_prefix}/${google_dataplex_aspect_type.asset_readiness.aspect_type_id}"]
-      push_endpoint = module.rollup_product.uri
+      description  = "Asset readiness changed on a catalog entry"
+      aspect_types = ["${local.aspect_type_prefix}/${google_dataplex_aspect_type.asset_readiness.aspect_type_id}"]
     }
+  }
+
+  push_subscriptions = {
+    schema-changes-push      = { topic = "schema-changes", endpoint = module.check_contract.uri }
+    readiness-changes-push   = { topic = "readiness-changes", endpoint = module.rollup_product.uri }
+    readiness-changes-notify = { topic = "readiness-changes", endpoint = module.notify_stewards.uri }
   }
 }
 
@@ -125,14 +129,14 @@ resource "google_pubsub_subscription" "dead_letter" {
 }
 
 resource "google_pubsub_subscription" "push" {
-  for_each = local.feeds
+  for_each = local.push_subscriptions
 
-  name                 = "${each.key}-push"
-  topic                = google_pubsub_topic.feed[each.key].id
+  name                 = each.key
+  topic                = google_pubsub_topic.feed[each.value.topic].id
   ack_deadline_seconds = 60
 
   push_config {
-    push_endpoint = each.value.push_endpoint
+    push_endpoint = each.value.endpoint
 
     oidc_token {
       service_account_email = google_service_account.push_invoker.email
@@ -157,7 +161,18 @@ resource "google_pubsub_subscription" "push" {
     google_pubsub_topic_iam_member.pubsub_dead_letter_publisher,
     module.check_contract,
     module.rollup_product,
+    module.notify_stewards,
   ]
+}
+
+moved {
+  from = google_pubsub_subscription.push["schema-changes"]
+  to   = google_pubsub_subscription.push["schema-changes-push"]
+}
+
+moved {
+  from = google_pubsub_subscription.push["readiness-changes"]
+  to   = google_pubsub_subscription.push["readiness-changes-push"]
 }
 
 # Pub/Sub's own service agent forwards undeliverable messages, so it needs to
@@ -176,11 +191,21 @@ resource "google_pubsub_topic_iam_member" "pubsub_dead_letter_publisher" {
 }
 
 resource "google_pubsub_subscription_iam_member" "pubsub_dead_letter_subscriber" {
-  for_each = local.feeds
+  for_each = local.push_subscriptions
 
   subscription = google_pubsub_subscription.push[each.key].name
   role         = "roles/pubsub.subscriber"
   member       = google_project_service_identity.pubsub.member
+}
+
+moved {
+  from = google_pubsub_subscription_iam_member.pubsub_dead_letter_subscriber["schema-changes"]
+  to   = google_pubsub_subscription_iam_member.pubsub_dead_letter_subscriber["schema-changes-push"]
+}
+
+moved {
+  from = google_pubsub_subscription_iam_member.pubsub_dead_letter_subscriber["readiness-changes"]
+  to   = google_pubsub_subscription_iam_member.pubsub_dead_letter_subscriber["readiness-changes-push"]
 }
 
 # The docs allow up to 10 minutes for a new feed to start publishing. Contracts

@@ -1,0 +1,23 @@
+# Copy to terraform.tfvars (gitignored) to point the demo at your own Google
+# Groups. Every variable has a default, so this file is optional: without
+# access groups, notifications are still published, with no recipient.
+
+# data_product_access_groups = {
+#   data-owners = {
+#     display_name = "Data owners"
+#     description  = "Accountable for the product and approve schema contract changes"
+#     google_group = "sales-orders-owners@example.com"
+#   }
+#   data-stewards = {
+#     display_name = "Data stewards"
+#     description  = "Notified when an asset breaks its schema contract"
+#     google_group = "sales-orders-stewards@example.com"
+#   }
+#   consumers = {
+#     display_name = "Consumers"
+#     description  = "Teams that build on the data product"
+#     google_group = "sales-orders-consumers@example.com"
+#   }
+# }
+
+# notify_access_group = "data-stewards"

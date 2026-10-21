@@ -74,7 +74,10 @@ FROM `${var.project_id}.raw.thelook_orders`
 
 ```bash
 ./scripts/show-feed.sh readiness-changes
+./scripts/show-feed.sh notifications
 ```
+
+The notification is `BREAKING`, addressed to the data product's `data-stewards` group, and lists `COLUMN_DROPPED num_of_item` as new. In step 1 you would also have seen a `REVIEW` notification for the added `gender` column.
 
 The quality scan gives a second, slower signal for the same change. Re-run it:
 
@@ -113,6 +116,12 @@ The producers agree the new schemas with their consumers. In `infra/contracts.tf
 
 Updating the contract aspect is itself a catalog change, so the `schema-changes` feed fires and `check-contract` re-evaluates. Both assets return to `READY`, and then the data product does too.
 
+Show the `RESOLVED` notifications, which list what was resolved:
+
+```bash
+./scripts/show-feed.sh notifications
+```
+
 Show the history:
 
 ```sql
@@ -120,6 +129,10 @@ SELECT logged_at, level, name, status, contract_version, reasons
 FROM `datacloud-metadata-feed.contract_monitoring.readiness_log`
 ORDER BY logged_at DESC
 LIMIT 20;
+
+SELECT notified_at, asset, severity, status, recipient, new_reasons
+FROM `datacloud-metadata-feed.contract_monitoring.notification_log`
+ORDER BY notified_at DESC;
 ```
 
 ## 5. Reset for the next run

@@ -29,6 +29,9 @@ Use these terms consistently in code, docs and commit messages.
 | reason | One difference between the live schema and the schema contract |
 | breaking | A reason that blocks: `COLUMN_DROPPED`, `TYPE_CHANGED`, `MODE_CHANGED` |
 | feed | A Knowledge Catalog metadata change feed |
+| notification | A message on `schema-change-notifications`, sent when an asset's set of reasons changes |
+| severity | `BREAKING`, `REVIEW` (only added columns) or `RESOLVED` (no reasons left) |
+| access group | A data product's named Google Group. `data-stewards` is the notification recipient. |
 
 ## Object map
 
@@ -44,8 +47,10 @@ Use these terms consistently in code, docs and commit messages.
 | `schema-changes`, `readiness-changes` | Feeds and topics | `infra/feeds.tf` |
 | `<topic>-demo` | Pull subscriptions for live demos, nothing consumes them | `infra/feeds.tf` |
 | `feed-dead-letter-pull` | Messages that failed 5 deliveries | `infra/feeds.tf` |
+| `schema-change-notifications` | Topic for steward notifications, with a `-demo` pull subscription | `infra/notifications.tf` |
+| `contract_monitoring.notification_log` | Every notification sent. Also how repeats are skipped. | `infra/notifications.tf` |
 | `<asset>-profile`, `<asset>-quality`, `<asset>-insights` | Data scans on all three assets, results published to the catalog | `infra/scans.tf` |
-| `check-contract`, `rollup-product` | Cloud Functions (Python 3.12) | `infra/functions.tf`, `infra/modules/function/`, `functions/` |
+| `check-contract`, `rollup-product`, `notify-stewards` | Cloud Functions (Python 3.12) | `infra/functions.tf`, `infra/modules/function/`, `functions/` |
 
 ## Verifying
 
@@ -75,6 +80,8 @@ gcloud dataplex datascans run orders-quality --location=us-central1 --project=da
 - **A new feed takes up to 10 minutes to publish.** Anything that must be seen by a feed on first apply depends on `time_sleep.feed_activation`.
 - **Data product assets must be in the same location as the data product.** Every resource uses `var.region`.
 - **Each function directory deploys on its own.** Never import across `functions/<name>/` directories, so shared helpers are repeated.
+- **Access groups are optional and live in `infra/terraform.tfvars`** (gitignored). Never commit real group or user emails. `terraform.tfvars.example` shows the format.
+- **The feed message does not carry the previous readiness.** `notify-stewards` compares against its last row in `notification_log` to work out new and resolved reasons.
 - **Non-interactive shells don't load `.envrc`**, so pass `--project` to `bq` and `gcloud`.
 
 ## Teardown

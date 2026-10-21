@@ -6,7 +6,8 @@
 # Usage:
 #   ./scripts/show-feed.sh                       # schema-changes-demo, up to 20 messages
 #   ./scripts/show-feed.sh readiness-changes     # the readiness feed instead
-#   ./scripts/show-feed.sh --clear               # drop the backlog on both, before a demo
+#   ./scripts/show-feed.sh notifications         # schema change notifications for stewards
+#   ./scripts/show-feed.sh --clear               # drop the backlog on all three, before a demo
 #   ./scripts/show-feed.sh --project=my-proj     # override project
 
 set -euo pipefail
@@ -26,11 +27,36 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$CLEAR" == true ]]; then
-  for feed in schema-changes readiness-changes; do
+  for feed in schema-changes readiness-changes schema-change-notifications; do
     gcloud pubsub subscriptions seek "${feed}-demo" --project="$PROJECT_ID" \
       --time="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --format=none
     echo "Cleared ${feed}-demo"
   done
+  exit 0
+fi
+
+if [[ "$FEED" == "notifications" ]]; then
+  gcloud pubsub subscriptions pull schema-change-notifications-demo --project="$PROJECT_ID" --auto-ack --limit=20 --format=json \
+    | python3 -I -c '
+import base64, json, sys
+
+messages = json.load(sys.stdin)
+if not messages:
+    print("No new notifications.")
+for m in sorted(messages, key=lambda m: m["message"]["publishTime"]):
+    n = json.loads(base64.b64decode(m["message"]["data"]))
+    recipient = n["recipient"]["googleGroup"] or "(none: " + n.get("note", "") + ")"
+    print(
+        m["message"]["publishTime"][11:19],
+        n["severity"].ljust(8),
+        n["dataProductName"] + " / " + n["asset"],
+        " " + n["previousStatus"] + " -> " + n["status"],
+    )
+    print("         to:", recipient)
+    for label, key in (("new", "newReasons"), ("resolved", "resolvedReasons")):
+        for r in n[key]:
+            print("        ", label.ljust(8), r["change"], r["column"] + ":", r["detail"])
+'
   exit 0
 fi
 

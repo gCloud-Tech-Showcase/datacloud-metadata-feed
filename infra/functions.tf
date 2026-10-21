@@ -11,8 +11,9 @@
 
 locals {
   functions = {
-    check-contract = "check_contract"
-    rollup-product = "rollup_product"
+    check-contract  = "check_contract"
+    rollup-product  = "rollup_product"
+    notify-stewards = "notify_stewards"
   }
 
   function_environment = {
@@ -60,7 +61,8 @@ resource "google_project_iam_member" "functions" {
   for_each = toset([
     "roles/dataplex.catalogEditor",      # read entries, write readiness aspects
     "roles/dataplex.aspectTypeUser",     # attach the custom readiness aspect types
-    "roles/dataplex.dataProductsViewer", # list data products and their assets
+    "roles/dataplex.dataProductsViewer", # list data products, their assets and access groups
+    "roles/bigquery.jobUser",            # notify-stewards reads its last notification
   ])
 
   project = var.project_id
@@ -131,6 +133,33 @@ module "rollup_product" {
   environment   = local.function_environment
 
   depends_on = [module.check_contract]
+}
+
+module "notify_stewards" {
+  source = "./modules/function"
+
+  name                    = "notify-stewards"
+  region                  = var.region
+  entry_point             = "notify_stewards"
+  source_bucket           = google_storage_bucket.function_source.name
+  source_object           = google_storage_bucket_object.function_source["notify-stewards"].name
+  build_service_account   = google_service_account.function_builder.id
+  runtime_service_account = google_service_account.functions.email
+  invoker_member          = google_service_account.push_invoker.member
+
+  # One instance at a time, so two deliveries for the same asset cannot both
+  # miss each other's entry in the notification log.
+  max_instances = 1
+  environment = merge(local.function_environment, {
+    NOTIFICATION_TOPIC  = google_pubsub_topic.notifications.id
+    NOTIFICATION_LOG    = "${var.project_id}.${google_bigquery_table.notification_log.dataset_id}.${google_bigquery_table.notification_log.table_id}"
+    NOTIFY_ACCESS_GROUP = var.notify_access_group
+  })
+
+  depends_on = [
+    module.rollup_product,
+    google_pubsub_topic_iam_member.functions_publish_notifications,
+  ]
 }
 
 moved {

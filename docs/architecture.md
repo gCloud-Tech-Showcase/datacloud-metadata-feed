@@ -23,6 +23,11 @@ sequenceDiagram
     RP->>KC: list data products and their assets
     RP->>KC: read asset-readiness of every asset
     RP->>KC: write product-readiness = BLOCKED
+    participant NS as notify-stewards
+    F2->>NS: Pub/Sub push (same message)
+    NS->>KC: read asset-readiness, data products, access groups
+    NS->>NS: compare with last row in notification_log
+    NS-->>NS: publish to schema-change-notifications (recipient: data-stewards group)
 ```
 
 Both functions append each status change to `contract_monitoring.readiness_log`. The view `contract_monitoring.current_readiness` shows the latest row per asset and per data product.
@@ -39,6 +44,7 @@ Both functions append each status change to `contract_monitoring.readiness_log`.
 | Feeds, topics, subscriptions | `infra/feeds.tf` | Two feeds, push and demo subscriptions, dead-letter topic |
 | Functions | `infra/functions.tf`, `infra/modules/function/`, `functions/` | `check-contract`, `rollup-product` |
 | Readiness history | `infra/monitoring.tf` | `readiness_log` table and `current_readiness` view |
+| Notifications | `infra/notifications.tf`, `functions/notify_stewards/` | `schema-change-notifications` topic, `notification_log` table |
 | Data scans | `infra/scans.tf` | Profile, quality and insights, published to each asset's entry |
 
 ## Design decisions
@@ -54,6 +60,9 @@ Both functions append each status change to `contract_monitoring.readiness_log`.
 | Everything in `us-central1` | A data product and its assets must share a location. theLook is in the US multi-region, so its tables are copied first. |
 | No Dataform | Two tables and one view are not a pipeline. Keeping every change in Tofu makes the producer workflow one edit and one apply. |
 | Push subscriptions, not Eventarc triggers | A push subscription supports a dead-letter topic, so a failing function does not lose events silently. |
+| Notify on every change to the set of reasons, including added columns | An added column breaks the contract without breaking consumers, but its contents may need review. Severity `REVIEW` keeps it apart from `BREAKING`. |
+| Notification history in BigQuery | The feed message does not include the previous readiness. The last notification per data product and asset gives new and resolved reasons, and skips repeated events. |
+| Access groups are optional | Most people running the demo cannot create Google Groups. Without them, notifications are still published, with no recipient and a note. |
 | `-demo` pull subscriptions | A presenter can pull and ack messages without taking them away from the functions. |
 
 ## Metadata change feed behaviour

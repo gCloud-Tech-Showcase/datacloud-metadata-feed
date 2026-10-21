@@ -24,3 +24,19 @@ variable "data_product_owner" {
   type        = string
   default     = null
 }
+
+variable "data_product_access_groups" {
+  description = "Optional access groups on the data product, keyed by access group ID. Each points at an existing Google Group. Leave empty to run the demo without groups: notifications are still published, with no recipient."
+  type = map(object({
+    display_name = string
+    description  = optional(string, "")
+    google_group = string
+  }))
+  default = {}
+}
+
+variable "notify_access_group" {
+  description = "Access group ID whose Google Group is named as the recipient of schema change notifications"
+  type        = string
+  default     = "data-stewards"
+}
