@@ -26,7 +26,7 @@ resource "google_bigquery_dataset" "domains" {
   delete_contents_on_destroy = true
 
   labels = {
-    project = "datacloud-metadata-feed"
+    project = var.project_id
     purpose = "data-domain"
     domain  = "metadata-feed"
     stage   = replace(each.key, "_", "-")
