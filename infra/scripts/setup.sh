@@ -2,20 +2,21 @@
 # Prepare a GCP project for `tofu apply`, then initialize the backend.
 #
 # Handles the things that cannot live inside the Terraform run itself:
-#   1. The bootstrap APIs (Cloud Resource Manager / Service Usage) the provider
-#      needs before it can manage ANY service on a fresh project.
-#   2. The remote-state bucket — a chicken-and-egg, since the backend must exist
-#      before `tofu init` and can't be stored in the state it holds.
+#   1. The bootstrap APIs (Cloud Resource Manager, Service Usage, Cloud Storage)
+#      the provider needs before it can manage any service on a fresh project.
+#   2. The remote-state bucket. The backend must exist before `tofu init` and
+#      cannot be stored in the state it holds.
 #   3. Injecting that bucket into the backend, because backend blocks cannot read
 #      variables (so the name is derived here instead of duplicated in .tf).
 #
-# Config comes from ONE place: the defaults in infra/variables.tf. Override with
-# flags if you're deploying somewhere else.
+# The project ID comes from project_id's default in infra/variables.tf. To
+# deploy elsewhere, change that default: it also drives every resource. The
+# state bucket goes in the US multi-region unless --location says otherwise.
 #
 # Usage:
 #   ./infra/scripts/setup.sh                      # prepare project + init
 #   ./infra/scripts/setup.sh --migrate            # also move existing LOCAL state to GCS
-#   ./infra/scripts/setup.sh --project=my-proj    # override project
+#   ./infra/scripts/setup.sh --project=my-proj    # state bucket and init only, not the resources
 #   ./infra/scripts/setup.sh --location=EU        # override state bucket location
 #
 # Idempotent: safe to re-run. Every step checks before acting.
@@ -38,7 +39,7 @@ while [[ $# -gt 0 ]]; do
     --location=*) LOCATION="${1#*=}"; shift ;;
     --migrate)    MIGRATE=true; shift ;;
     -h|--help)
-      sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,23p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -48,7 +49,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Read a variable's default out of variables.tf — the single source of truth.
+# Read a variable's default out of variables.tf, the single source of truth.
 tf_default() {
   sed -n "/variable \"$1\"/,/^}/{ s/^[[:space:]]*default[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p; }" "$VARS_FILE"
 }
@@ -86,7 +87,7 @@ gcloud services enable \
   storage.googleapis.com \
   --project="$PROJECT_ID"
 
-# Enablement is eventually consistent — a fresh project can still 403 for a
+# Enablement is eventually consistent: a fresh project can still 403 for a
 # minute afterwards. Poll CRM so the first apply doesn't fail on propagation.
 echo -n "==> Waiting for Cloud Resource Manager to respond"
 for _ in $(seq 1 30); do
@@ -99,7 +100,7 @@ for _ in $(seq 1 30); do
 done
 
 # -----------------------------------------------------------------------------
-# 2. State bucket — versioned so a bad apply or a deleted object is recoverable.
+# 2. State bucket, versioned so a bad apply or a deleted object is recoverable.
 # -----------------------------------------------------------------------------
 echo ""
 if gcloud storage buckets describe "gs://${BUCKET}" --project="$PROJECT_ID" >/dev/null 2>&1; then
@@ -118,7 +119,7 @@ echo "==> Ensuring object versioning is enabled"
 gcloud storage buckets update "gs://${BUCKET}" --versioning --project="$PROJECT_ID"
 
 # -----------------------------------------------------------------------------
-# 3. Backend init — bucket injected here rather than hardcoded in providers.tf.
+# 3. Backend init. The bucket is injected here, not hardcoded in providers.tf.
 # -----------------------------------------------------------------------------
 echo ""
 cd "$INFRA_DIR"

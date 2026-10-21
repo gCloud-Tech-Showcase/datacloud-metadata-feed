@@ -165,16 +165,6 @@ resource "google_pubsub_subscription" "push" {
   ]
 }
 
-moved {
-  from = google_pubsub_subscription.push["schema-changes"]
-  to   = google_pubsub_subscription.push["schema-changes-push"]
-}
-
-moved {
-  from = google_pubsub_subscription.push["readiness-changes"]
-  to   = google_pubsub_subscription.push["readiness-changes-push"]
-}
-
 # Pub/Sub's own service agent forwards undeliverable messages, so it needs to
 # publish to the dead-letter topic and to ack on the source subscription.
 resource "google_project_service_identity" "pubsub" {
@@ -196,16 +186,6 @@ resource "google_pubsub_subscription_iam_member" "pubsub_dead_letter_subscriber"
   subscription = google_pubsub_subscription.push[each.key].name
   role         = "roles/pubsub.subscriber"
   member       = google_project_service_identity.pubsub.member
-}
-
-moved {
-  from = google_pubsub_subscription_iam_member.pubsub_dead_letter_subscriber["schema-changes"]
-  to   = google_pubsub_subscription_iam_member.pubsub_dead_letter_subscriber["schema-changes-push"]
-}
-
-moved {
-  from = google_pubsub_subscription_iam_member.pubsub_dead_letter_subscriber["readiness-changes"]
-  to   = google_pubsub_subscription_iam_member.pubsub_dead_letter_subscriber["readiness-changes-push"]
 }
 
 # The docs allow up to 10 minutes for a new feed to start publishing. Contracts

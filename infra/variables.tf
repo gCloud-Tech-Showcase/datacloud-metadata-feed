@@ -3,7 +3,7 @@
 # Every variable has a working default, so a clone is `setup.sh` then `apply`
 # with no tfvars file. `project_id`'s default below is the SINGLE SOURCE OF
 # TRUTH for this domain repo: providers, resources, derived bucket names and
-# scripts/setup.sh all read from it. Never restate a project ID or bucket name
+# infra/scripts/setup.sh all read from it. Never restate a project ID or bucket name
 # anywhere else — derive it.
 # =============================================================================
 

@@ -5,7 +5,7 @@
 
 resource "google_project_service" "apis" {
   for_each = toset([
-    # Bootstrap pair — also pre-enabled imperatively by scripts/setup.sh, since
+    # Bootstrap pair — also pre-enabled imperatively by infra/scripts/setup.sh, since
     # the provider needs CRM before it can manage any service. Declared here too
     # so the set is complete and self-documenting.
     "cloudresourcemanager.googleapis.com", # provider manages google_project_service via CRM
@@ -14,7 +14,7 @@ resource "google_project_service" "apis" {
     "bigquery.googleapis.com",         # source copies, golden tables, view, readiness log
     "dataplex.googleapis.com",         # Knowledge Catalog: aspects, data product, metadata feeds
     "pubsub.googleapis.com",           # feed topics, push and demo subscriptions
-    "cloudfunctions.googleapis.com",   # check-contract and rollup-product
+    "cloudfunctions.googleapis.com",   # check-contract, rollup-product, notify-stewards
     "run.googleapis.com",              # Cloud Functions Gen2 run on Cloud Run
     "cloudbuild.googleapis.com",       # builds the function containers
     "artifactregistry.googleapis.com", # stores the function containers

@@ -96,16 +96,6 @@ resource "terraform_data" "customer_orders_view" {
   depends_on = [terraform_data.golden_table]
 }
 
-# The view used to be a google_bigquery_table. Dropping it from state without
-# destroying it keeps its catalog entry and schema contract.
-removed {
-  from = google_bigquery_table.customer_orders
-
-  lifecycle {
-    destroy = false
-  }
-}
-
 data "google_client_openid_userinfo" "deployer" {}
 
 resource "google_dataplex_data_product" "sales_orders" {

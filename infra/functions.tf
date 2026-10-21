@@ -5,8 +5,11 @@
 #                    writes asset-readiness
 #   rollup-product   recomputes product-readiness for every data product that
 #                    contains the asset
+#   notify-stewards  publishes a schema change notification for every data
+#                    product that contains the asset
 #
-# Both receive Pub/Sub pushes, authenticated with the push-invoker identity.
+# All three receive Pub/Sub pushes, authenticated with the push-invoker
+# identity.
 # =============================================================================
 
 locals {
@@ -54,7 +57,7 @@ resource "google_storage_bucket_object" "function_source" {
 
 resource "google_service_account" "functions" {
   account_id   = "drift-functions"
-  display_name = "Runtime identity for check-contract and rollup-product"
+  display_name = "Runtime identity for the schema drift functions"
 }
 
 resource "google_project_iam_member" "functions" {
@@ -160,9 +163,4 @@ module "notify_stewards" {
     module.rollup_product,
     google_pubsub_topic_iam_member.functions_publish_notifications,
   ]
-}
-
-moved {
-  from = google_cloudfunctions2_function.fn["rollup-product"]
-  to   = module.rollup_product.google_cloudfunctions2_function.this
 }

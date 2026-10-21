@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Print metadata change feed messages from a `-demo` pull subscription, one
-# readable line each. Nothing else consumes these subscriptions, so acking here
-# never takes a message away from the functions.
+# Print messages from a `-demo` pull subscription, one readable line each: the
+# two metadata change feeds, or the steward notifications. Times are UTC.
+# Nothing else consumes these subscriptions, so acking here never takes a
+# message away from the functions.
 #
 # Usage:
 #   ./scripts/show-feed.sh                       # schema-changes-demo, up to 20 messages
@@ -21,7 +22,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --project=*) PROJECT_ID="${1#*=}"; shift ;;
     --clear)     CLEAR=true; shift ;;
-    -h|--help)   sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)   sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)           FEED="$1"; shift ;;
   esac
 done

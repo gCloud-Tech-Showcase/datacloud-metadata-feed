@@ -1,6 +1,6 @@
 # datacloud-metadata-feed
 
-Standalone domain: Schema Drift Alerts with Metadata Change Feeds. Knowledge Catalog metadata change feeds push BigQuery schema changes to Pub/Sub. Two Cloud Functions compare each asset's live schema with a schema contract aspect and mark the asset and its data product `READY` or `BLOCKED`. Source data is a copy of theLook eCommerce.
+Standalone domain: Schema Drift Alerts with Metadata Change Feeds. Knowledge Catalog metadata change feeds push BigQuery schema changes to Pub/Sub. Three Cloud Functions compare each asset's live schema with its schema contract, mark the asset and its data product `READY` or `BLOCKED`, and notify the data product's steward group. Source data is a copy of theLook eCommerce.
 
 ## Standing it up
 
@@ -10,11 +10,13 @@ cd infra && tofu apply     # zero required variables, ~15 min on first apply
 ./scripts/verify.sh --expect READY
 ```
 
-**Tofu layout: flat.** Everything is in `infra/*.tf`, with one apply and no `bootstrap/` stage.
+**Tofu layout: flat.** Everything is in `infra/*.tf`, with one apply and no `bootstrap/` stage. `infra/modules/function/` is the one local module.
 
 **No Dataform.** This is a deliberate exception to the domain template. Two tables and one view are not a pipeline, and keeping every change in Tofu makes the demo's producer workflow one edit and one apply.
 
-Deploying elsewhere: change `project_id`'s default in `infra/variables.tf`. That single value drives the provider, the resources, the derived bucket names and the state bucket. Never hardcode it anywhere else.
+**One project ID.** `project_id`'s default in `infra/variables.tf` drives the providers, the resources, the bucket names and `setup.sh`. Never hardcode it in `.tf` files or scripts. In commands, use a `PROJECT_ID` shell variable.
+
+**Times are UTC** in logs, `scripts/show-feed.sh` output and the BigQuery history tables.
 
 ## Words
 
@@ -22,6 +24,7 @@ Use these terms consistently in code, docs and commit messages.
 
 | Term | Meaning |
 | --- | --- |
+| Knowledge Catalog | The product. Its APIs, roles and `gcloud` commands are still named `dataplex`. |
 | asset | A BigQuery table or view listed in the data product |
 | schema contract | The `schema-contract` aspect: the agreed columns of one asset |
 | live schema | The system `schema` aspect that Knowledge Catalog keeps on every BigQuery entry |
@@ -31,57 +34,64 @@ Use these terms consistently in code, docs and commit messages.
 | feed | A Knowledge Catalog metadata change feed |
 | notification | A message on `schema-change-notifications`, sent when an asset's set of reasons changes |
 | severity | `BREAKING`, `REVIEW` (only added columns) or `RESOLVED` (no reasons left) |
-| access group | A data product's named Google Group. `data-stewards` is the notification recipient. |
+| access group | A data product's named Google Group. `var.notify_access_group` (default `data-stewards`) names the notification recipient. |
 
 ## Object map
 
+The single inventory of what the repo creates. Update it in the same change as the `.tf` file.
+
 | Object | Type | Defined in |
 | --- | --- | --- |
+| `raw`, `sales`, `marketing`, `contract_monitoring` | BigQuery datasets in `us-central1` | `infra/datasets.tf` |
 | `raw.thelook_orders`, `raw.thelook_users` | Tables (`bq cp` from theLook) | `infra/source_data.tf` |
 | `sales.orders`, `sales.customers` | Tables (`CREATE OR REPLACE TABLE … AS SELECT`) | `infra/data_product.tf` |
 | `marketing.customer_orders` | View (`CREATE OR REPLACE VIEW`) | `infra/data_product.tf` |
-| `contract_monitoring.readiness_log` | Table, every readiness change | `infra/monitoring.tf` |
-| `contract_monitoring.current_readiness` | View, latest row per asset and product | `infra/monitoring.tf` |
-| `sales-orders` | Data product with 3 assets | `infra/data_product.tf` |
-| `schema-contract`, `asset-readiness`, `product-readiness` | Aspect types | `infra/contracts.tf` |
-| `schema-changes`, `readiness-changes` | Feeds and topics | `infra/feeds.tf` |
-| `<topic>-demo` | Pull subscriptions for live demos, nothing consumes them | `infra/feeds.tf` |
-| `feed-dead-letter-pull` | Messages that failed 5 deliveries | `infra/feeds.tf` |
-| `schema-change-notifications` | Topic for steward notifications, with a `-demo` pull subscription | `infra/notifications.tf` |
-| `contract_monitoring.notification_log` | Every notification sent. Also how repeats are skipped. | `infra/notifications.tf` |
+| `sales-orders` | Data product with 3 assets and optional access groups | `infra/data_product.tf` |
+| `schema-contract`, `asset-readiness`, `product-readiness` | Aspect types, and the schema contracts | `infra/contracts.tf` |
+| `schema-changes`, `readiness-changes` | Feeds and their topics | `infra/feeds.tf` |
+| `<topic>-push`, `readiness-changes-notify` | Push subscriptions to the functions | `infra/feeds.tf` |
+| `<topic>-demo` | Pull subscriptions for live demos. Nothing consumes them. | `infra/feeds.tf`, `infra/notifications.tf` |
+| `feed-dead-letter`, `feed-dead-letter-pull` | Messages that failed 5 deliveries | `infra/feeds.tf` |
+| `schema-change-notifications` | Topic for steward notifications | `infra/notifications.tf` |
+| `check-contract`, `rollup-product`, `notify-stewards` | Cloud Functions (Python 3.12), deployed one after another | `infra/functions.tf`, `infra/modules/function/`, `functions/` |
+| `drift-functions`, `function-builder`, `feed-push-invoker` | Service accounts: function runtime, function build, Pub/Sub push | `infra/functions.tf` |
+| `<project>-function-source` | Bucket holding the zipped function source | `infra/functions.tf` |
+| `contract_monitoring.readiness_log`, `current_readiness` | Table of every readiness change, and a view of the latest per asset and product | `infra/monitoring.tf` |
+| `contract_monitoring.notification_log` | Table of every notification sent. Also how repeats are skipped. | `infra/notifications.tf` |
 | `<asset>-profile`, `<asset>-quality`, `<asset>-insights` | Data scans on all three assets, results published to the catalog | `infra/scans.tf` |
-| `check-contract`, `rollup-product`, `notify-stewards` | Cloud Functions (Python 3.12) | `infra/functions.tf`, `infra/modules/function/`, `functions/` |
+| `data-scanner` | Service account the scans run as | `infra/scans.tf` |
 
-## Verifying
+## Checking a change
+
+```bash
+cd infra && tofu fmt -recursive && tofu validate && tofu plan
+ruff format --line-length 100 functions/ && ruff check --line-length 100 functions/
+bash -n scripts/*.sh infra/scripts/*.sh
+```
+
+There are no unit tests. After an apply:
 
 ```bash
 ./scripts/verify.sh --expect READY   # all assets and the data product READY, dead-letter empty
 ./scripts/verify.sh --smoke          # a throwaway table with a broken contract becomes BLOCKED
-```
-
-```sql
-SELECT * FROM `contract_monitoring.current_readiness`;   -- one row per asset and product
-```
-
-```bash
-gcloud dataplex datascans run orders-quality --location=us-central1 --project=datacloud-metadata-feed   # re-run a scan
+bq --project_id="$PROJECT_ID" query --nouse_legacy_sql 'SELECT * FROM contract_monitoring.current_readiness'
+gcloud dataplex datascans run orders-quality --location=us-central1 --project="$PROJECT_ID"   # re-run a scan
 ```
 
 ## Gotchas
 
-- **Never define a golden table as a `google_bigquery_table` with a schema block.** A dropped column forces replacement, which deletes the catalog entry and its contract. Build it with `CREATE OR REPLACE TABLE … AS SELECT` from a `terraform_data` keyed on the SQL. The catalog keeps the same entry and its aspects.
-- **Do not use `google_bigquery_job` for data the next resource needs.** It returns as soon as the job is submitted, and a failed job still shows as created. `bq` waits and fails the apply.
-- **The console's Insights tab needs labels on the table** (`dataplex-data-documentation-published-{scan,project,location}`). API-created scans do not add them, and `CREATE OR REPLACE` drops labels, so each statement sets them in `OPTIONS(labels=…)`. Profile and quality results show without labels.
-- **Lineage is only recorded for DDL and DML.** `CREATE TABLE AS SELECT` and `CREATE VIEW` produce lineage. A `SELECT` into a destination table, or a view created through the API (`google_bigquery_table`), does not. Lineage can take up to 24 hours to appear.
-- **Feed filters need the project-number form** (`projects/655216118709/locations/global/...`). The `dataplex-types` alias is accepted but matches nothing.
-- **The event's `entryName` cannot be passed to `GetEntry`.** Rebuild the entry name from `fullQualifiedName`.
-- **`updatedAspects` lists `schema` on every table update**, not only on schema changes. Do not use it to decide whether the schema changed.
-- **Keep the two readiness aspect types separate.** Merging them makes `rollup-product` trigger itself through the readiness feed.
-- **A new feed takes up to 10 minutes to publish.** Anything that must be seen by a feed on first apply depends on `time_sleep.feed_activation`.
-- **Data product assets must be in the same location as the data product.** Every resource uses `var.region`.
-- **Each function directory deploys on its own.** Never import across `functions/<name>/` directories, so shared helpers are repeated.
-- **Access groups are optional and live in `infra/terraform.tfvars`** (gitignored). Never commit real group or user emails. `terraform.tfvars.example` shows the format.
-- **The feed message does not carry the previous readiness.** `notify-stewards` compares against its last row in `notification_log` to work out new and resolved reasons.
+Each line is a guardrail. The reasons and the observed feed behaviour behind them are in [`docs/architecture.md`](docs/architecture.md#design-decisions).
+
+- **Build golden tables and views with `CREATE OR REPLACE` from a `terraform_data`,** never with `google_bigquery_table` or `google_bigquery_job`.
+- **Set the insights labels in every `CREATE OR REPLACE` statement** (`OPTIONS(labels=…)`). The statement drops labels, and the console's Insights tab needs them.
+- **Use the project-number form in feed filters** (`projects/655216118709/locations/global/...`). The `dataplex-types` alias matches nothing.
+- **Rebuild entry names from `fullQualifiedName`.** The event's `entryName` is an opaque ID on updates.
+- **Never treat `updatedAspects` as a schema-change signal.** It lists `schema` on every table update.
+- **Keep the two readiness aspect types separate,** or `rollup-product` triggers itself.
+- **Make anything a feed must see on first apply depend on `time_sleep.feed_activation`.**
+- **Keep every resource in `var.region`.** A data product and its assets must share a location.
+- **Never import across `functions/<name>/` directories.** Each deploys on its own, so helpers are repeated.
+- **Keep access groups in `infra/terraform.tfvars`** (gitignored). Never commit real group or user emails.
 - **Non-interactive shells don't load `.envrc`**, so pass `--project` to `bq` and `gcloud`.
 
 ## Teardown
@@ -90,8 +100,12 @@ gcloud dataplex datascans run orders-quality --location=us-central1 --project=da
 cd infra && tofu destroy
 ```
 
-Removes the domain, including dataset contents. Not removed, because Tofu did not create them: the project and the state bucket (`gs://datacloud-metadata-feed-tfstate`). The contract aspects are dropped from state but not deleted. They go away with their tables.
+Removes the domain, including dataset contents. What stays behind, and how to remove it, is listed in [`README.md`](README.md#cleanup). The schema contract aspects are dropped from state but not deleted. They go away with their tables.
 
 ## More
 
-`README.md` for the human-facing overview, `docs/01-demo.md` for the live walkthrough, `docs/architecture.md` for design decisions and observed feed behaviour.
+| Doc | Covers |
+| --- | --- |
+| [`README.md`](README.md) | Human-facing overview, prerequisites, quickstart, cleanup |
+| [`docs/01-demo.md`](docs/01-demo.md) | The live walkthrough |
+| [`docs/architecture.md`](docs/architecture.md) | Data flow, design decisions, observed feed behaviour, failure modes |
