@@ -1,10 +1,15 @@
-# Schema Drift Alerts with Metadata Change Feeds
+# Data Cloud: Schema Drift Alerts with Metadata Change Feeds
 
-A producer domain changes a golden table's schema. Within seconds, Knowledge Catalog marks the table, and then its data product, as `BLOCKED` with a readable reason, and the data product's steward group is notified. No polling and no scheduled checks: [metadata change feeds](https://cloud.google.com/knowledge-catalog/docs/metadata-change-feeds-overview) push every catalog change to Pub/Sub, and three small functions do the rest.
+Catch a breaking schema change before it reaches the teams that use the data. A producer changes a golden table in BigQuery. Within seconds, Knowledge Catalog marks the table and its data product `BLOCKED`, gives the reason, and notifies the data product's stewards.
 
-The scenario is a data mesh. The `sales` domain publishes golden tables in the **Sales Orders** data product. The `marketing` domain builds a view on them. Each asset has a schema contract, and the platform team wants to know about a breaking change before it reaches production.
+There is no polling and no scheduled check. [Metadata change feeds](https://cloud.google.com/knowledge-catalog/docs/metadata-change-feeds-overview) push every catalog change to Pub/Sub, and three small Cloud Functions do the rest. Clone the repo, point it at your own GCP project, and run `tofu apply`.
 
-Everything is standalone: clone it, point it at your own GCP project, and `tofu apply` builds the data, the catalog metadata, the feeds and the functions.
+- **One data product, three assets:** two tables and one view, built from a copy of [theLook eCommerce](https://console.cloud.google.com/marketplace/product/bigquery-public-data/thelook-ecommerce)
+- **A schema contract on each asset:** the columns, types and modes that producers and consumers agreed
+- **Seconds from change to alert:** a dropped column, a changed type or a changed mode blocks the asset and the data product
+- **A history in BigQuery:** every readiness change and every notification, ready to query
+
+See [`docs/`](docs/README.md) for the demo guide and [`docs/quick.md`](docs/quick.md) for copy-paste commands.
 
 ## Architecture
 
@@ -19,83 +24,75 @@ flowchart LR
     F2 --> RP["rollup-product"]
     RP -->|"product-readiness"| DP["Data product entry"]
     F2 --> NS["notify-stewards"]
-    NS --> NT["Topic: schema-change-notifications<br/>(recipient: the data product's steward group)"]
-    CC --> LOG[("contract_monitoring<br/>readiness_log")]
-    RP --> LOG
+    NS --> NT["Topic: schema-change-notifications"]
 ```
 
-| Function | Does |
-| --- | --- |
-| `check-contract` | Compares the asset's live schema with its schema contract and writes `asset-readiness` |
-| `rollup-product` | Marks every data product that contains the asset `BLOCKED` if any of its assets is not `READY` |
-| `notify-stewards` | Publishes a notification to the data product's steward group when the asset's reasons change |
-
-| Aspect type | Attached to | Written by | Holds |
-| --- | --- | --- | --- |
-| `schema-contract` | Each asset | Tofu (`infra/contracts.tf`) | The agreed columns, types and modes, plus a version |
-| `asset-readiness` | Each asset | `check-contract` | `READY` or `BLOCKED`, and one reason per difference from the contract |
-| `product-readiness` | The data product | `rollup-product` | `BLOCKED` when any asset is not `READY`, and which asset |
-
-| Reason | Breaking? |
-| --- | --- |
-| `COLUMN_DROPPED` | Yes |
-| `TYPE_CHANGED` | Yes |
-| `MODE_CHANGED` | Yes |
-| `COLUMN_ADDED` | No (reported, does not block) |
-
-| Notification severity | When | Asset readiness |
-| --- | --- | --- |
-| `BREAKING` | At least one breaking reason | `BLOCKED` |
-| `REVIEW` | Only added columns: the contract is broken, nothing downstream breaks yet | `READY` |
-| `RESOLVED` | No reasons left: the contract was revised or the change reverted | `READY` |
-
-For the full flow, the design decisions and the feed behaviour they rely on, see [`docs/architecture.md`](docs/architecture.md).
+Details: [`docs/architecture.md`](docs/architecture.md).
 
 ## Prerequisites
 
 | Requirement | Notes |
 | --- | --- |
-| A GCP project with billing | Created once, out of band. Commands below. |
+| A GCP project with billing | Create it once, before the first apply. The commands are below. |
 | [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) | Provides `gcloud` and `bq`. Tofu calls both during the apply. |
-| [OpenTofu](https://opentofu.org) 1.6 or later (`tofu`) | Terraform 1.6 or later works too. |
-| `curl` and `python3` | Used by `scripts/verify.sh` and `scripts/show-feed.sh`. |
+| [OpenTofu](https://opentofu.org) 1.6 or later | `setup.sh` runs `tofu init`. |
+| `curl` and `python3` | `scripts/verify.sh` and `scripts/show-feed.sh` use them. |
 
-Pick a project ID: it must be globally unique. Create the project and log in:
+The project ID must be globally unique. Create the project, then log in twice. Tofu uses the application default credentials. `bq`, `gcloud` and the scripts use the CLI login.
 
 ```bash
 PROJECT_ID=<your-project-id>
 gcloud projects create "$PROJECT_ID" --organization=<YOUR_ORG_ID>
 gcloud billing projects link "$PROJECT_ID" --billing-account=<YOUR_BILLING_ACCOUNT>
+gcloud auth login
 gcloud auth application-default login
 ```
 
-Then set `project_id`'s default in `infra/variables.tf` to your project ID. That one value drives the providers, the resources, the bucket names and `setup.sh`.
+Set `project_id`'s default in `infra/variables.tf` to your project ID. That one value drives the providers, the resources, the bucket names and `setup.sh`.
 
 ## Quickstart
 
 ```bash
-./infra/scripts/setup.sh   # one-time per project: APIs + state bucket + tofu init
+./infra/scripts/setup.sh   # one time per project: APIs, state bucket, tofu init
 cd infra && tofu apply     # zero required variables
 ```
 
-The first apply takes about 15 minutes. It waits for IAM to propagate, waits 10 minutes for the new feeds to start publishing before it attaches the contracts, and runs the first scans.
+The first apply takes about 15 minutes. It waits for IAM to propagate and for the new feeds to start publishing, then runs the first data scans.
 
-Optional: to name real recipients in the notifications, copy `infra/terraform.tfvars.example` to `infra/terraform.tfvars` and point the data product's access groups at your own Google Groups. Without it, everything still works and notifications have no recipient.
+Notifications go to the data product's `data-stewards` access group. This group is optional. To use your own Google Groups, copy `infra/terraform.tfvars.example` to `infra/terraform.tfvars` and set the groups there. Without it, notifications are still published, with no recipient.
 
 ## Verify
 
 ```bash
 ./scripts/verify.sh --expect READY   # every asset and the data product are READY
-./scripts/verify.sh --smoke          # end-to-end: a throwaway table must become BLOCKED
+./scripts/verify.sh --smoke          # a throwaway table with a broken contract becomes BLOCKED
 ```
 
-## Run the demo
-
-Follow [`docs/01-demo.md`](docs/01-demo.md): six steps from `READY` to `BLOCKED` and back, with the feed messages and steward notifications at each step. Every change is a SQL or contract edit in `infra/` followed by `tofu apply`.
+Then follow the [demo guide](docs/01-demo.md): six steps from `READY` to `BLOCKED` and back.
 
 ## What gets created
 
-BigQuery datasets and tables in `us-central1` (copied from [theLook eCommerce](https://console.cloud.google.com/marketplace/product/bigquery-public-data/thelook-ecommerce)), the Sales Orders data product with its three assets, three aspect types, two metadata feeds, three Cloud Functions, Pub/Sub topics and subscriptions, and profile, quality and insights scans. The full object map, with the file that defines each object, is in [`AGENTS.md`](AGENTS.md#object-map).
+Everything is in `us-central1`.
+
+| Resource | Notes |
+| --- | --- |
+| BigQuery datasets `raw`, `sales`, `marketing` | theLook copies, the two golden tables and the consumer view |
+| BigQuery dataset `contract_monitoring` | `readiness_log`, `current_readiness` and `notification_log` |
+| Data product `sales-orders` | Three assets: `sales.orders`, `sales.customers`, `marketing.customer_orders` |
+| Aspect types `schema-contract`, `asset-readiness`, `product-readiness` | The schema contracts, and the readiness of each asset and of the data product |
+| Feeds `schema-changes`, `readiness-changes` | Each feed publishes to a Pub/Sub topic of the same name |
+| Cloud Functions `check-contract`, `rollup-product`, `notify-stewards` | Python 3.12. Pub/Sub pushes feed messages to them. |
+| Topic `schema-change-notifications` | The steward notifications |
+| `-demo` pull subscriptions | One per topic, for showing messages live. Nothing else reads them. |
+| Topic `feed-dead-letter` | Messages that failed 5 deliveries |
+| Profile, quality and insights scans | On all three assets, with results published to the catalog |
+| Service accounts | `drift-functions`, `function-builder`, `feed-push-invoker`, `data-scanner` |
+| Bucket `<project>-function-source` | The zipped function source |
+
+## Known limitations
+
+- A dropped table does not block its data product. The feed sends no message for `DROP TABLE` ([#3](https://github.com/gCloud-Tech-Showcase/datacloud-metadata-feed/issues/3)).
+- Feed messages for views were not delivered in the US multi-region. The demo runs in `us-central1`, where every test delivered (verified on 2026-10-21).
 
 ## Cleanup
 
@@ -103,13 +100,13 @@ BigQuery datasets and tables in `us-central1` (copied from [theLook eCommerce](h
 cd infra && tofu destroy
 ```
 
-These stay after `tofu destroy`, because Tofu did not create them or deliberately leaves them:
+These stay after `tofu destroy`:
 
 | Left behind | Why | Remove with |
 | --- | --- | --- |
-| The project | Created out of band | `gcloud projects delete "$PROJECT_ID"` |
-| `gs://<project>-tfstate` | Holds the state that `destroy` itself uses | `gcloud storage rm -r "gs://$PROJECT_ID-tfstate"` |
-| Enabled APIs | `disable_on_destroy = false`, so a shared project is not broken | Nothing to do, or `gcloud services disable` |
-| `gs://gcf-v2-sources-<project-number>-us-central1` and the `gcf-artifacts` Artifact Registry repository | Created by Cloud Functions for its builds | `gcloud storage rm -r` and `gcloud artifacts repositories delete gcf-artifacts --location=us-central1` |
+| The project | Tofu did not create it | `gcloud projects delete "$PROJECT_ID"` |
+| `gs://<project>-tfstate` | It holds the state that `destroy` uses | `gcloud storage rm -r "gs://$PROJECT_ID-tfstate"` |
+| Enabled APIs | Tofu leaves them on so that a shared project does not break | `gcloud services disable`, if you want |
+| `gs://gcf-v2-sources-<project-number>-us-central1` and the `gcf-artifacts` repository | Cloud Functions creates them for its builds | `gcloud storage rm -r` and `gcloud artifacts repositories delete gcf-artifacts --location=us-central1` |
 
 Deleting the project removes all of them.

@@ -1,13 +1,13 @@
 name: Bug
-description: Something is broken — a Dataform run failing, an apply blowing up, a query erroring.
+description: Something is broken. An apply fails, a function errors, or verify.sh fails.
 title: "[Bug] "
 labels: ["type:bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        For data that looks wrong while the pipeline runs fine, use the
-        data-quality template instead — this one is for things that actually fail.
+        For data that looks wrong while everything runs, use the data-quality
+        template instead. This one is for things that fail.
   - type: textarea
     id: what_happened
     attributes:
@@ -25,7 +25,7 @@ body:
     id: repro
     attributes:
       label: How can someone reproduce it?
-      description: Commands, queries, or a link to the workflow invocation.
+      description: Commands, queries, or the failing function's log entry.
     validations:
       required: false
   - type: textarea

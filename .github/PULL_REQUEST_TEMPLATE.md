@@ -8,13 +8,13 @@
 
 ## Impact on data consumers
 
-<!-- Does any serving table change shape, semantics, or row count? Say "none"
+<!-- Does a data product asset or its schema contract change? Say "none"
      if nothing downstream is affected. -->
 
 ## Testing notes
 
-<!-- What you ran and what it showed. For a pipeline change: did the workflow
-     go green, and do the assertions still return zero rows? -->
+<!-- What you ran and what it showed. After an apply: do
+     `./scripts/verify.sh --expect READY` and `./scripts/verify.sh --smoke` pass? -->
 
 ## Risks / rollback
 

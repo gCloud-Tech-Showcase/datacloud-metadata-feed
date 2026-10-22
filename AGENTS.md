@@ -1,6 +1,6 @@
 # datacloud-metadata-feed
 
-Standalone domain: Schema Drift Alerts with Metadata Change Feeds. Knowledge Catalog metadata change feeds push BigQuery schema changes to Pub/Sub. Three Cloud Functions compare each asset's live schema with its schema contract, mark the asset and its data product `READY` or `BLOCKED`, and notify the data product's steward group. Source data is a copy of theLook eCommerce.
+Standalone demo: Schema Drift Alerts with Metadata Change Feeds. Feeds push BigQuery schema changes to Pub/Sub. Three Cloud Functions compare each asset's live schema with its schema contract. They mark the asset and its data product `READY` or `BLOCKED`, and notify the `data-stewards` access group. Source data is a copy of theLook eCommerce.
 
 ## Standing it up
 
@@ -36,32 +36,21 @@ Use these terms consistently in code, docs and commit messages.
 | severity | `BREAKING`, `REVIEW` (only added columns) or `RESOLVED` (no reasons left) |
 | access group | A data product's named Google Group. `var.notify_access_group` (default `data-stewards`) names the notification recipient. |
 
-## Object map
+## Data model
 
-The single inventory of what the repo creates. Update it in the same change as the `.tf` file.
+Everything is in `us-central1`. The full resource list is in [`README.md`](README.md#what-gets-created).
 
-| Object | Type | Defined in |
+| Dataset | Object | What |
 | --- | --- | --- |
-| `raw`, `sales`, `marketing`, `contract_monitoring` | BigQuery datasets in `us-central1` | `infra/datasets.tf` |
-| `raw.thelook_orders`, `raw.thelook_users` | Tables (`bq cp` from theLook) | `infra/source_data.tf` |
-| `sales.orders`, `sales.customers` | Tables (`CREATE OR REPLACE TABLE … AS SELECT`) | `infra/data_product.tf` |
-| `marketing.customer_orders` | View (`CREATE OR REPLACE VIEW`) | `infra/data_product.tf` |
-| `sales-orders` | Data product with 3 assets and optional access groups | `infra/data_product.tf` |
-| `schema-contract`, `asset-readiness`, `product-readiness` | Aspect types, and the schema contracts | `infra/contracts.tf` |
-| `schema-changes`, `readiness-changes` | Feeds and their topics | `infra/feeds.tf` |
-| `<topic>-push`, `readiness-changes-notify` | Push subscriptions to the functions | `infra/feeds.tf` |
-| `<topic>-demo` | Pull subscriptions for live demos. Nothing consumes them. | `infra/feeds.tf`, `infra/notifications.tf` |
-| `feed-dead-letter`, `feed-dead-letter-pull` | Messages that failed 5 deliveries | `infra/feeds.tf` |
-| `schema-change-notifications` | Topic for steward notifications | `infra/notifications.tf` |
-| `check-contract`, `rollup-product`, `notify-stewards` | Cloud Functions (Python 3.12), deployed one after another | `infra/functions.tf`, `infra/modules/function/`, `functions/` |
-| `drift-functions`, `function-builder`, `feed-push-invoker` | Service accounts: function runtime, function build, Pub/Sub push | `infra/functions.tf` |
-| `<project>-function-source` | Bucket holding the zipped function source | `infra/functions.tf` |
-| `contract_monitoring.readiness_log`, `current_readiness` | Table of every readiness change, and a view of the latest per asset and product | `infra/monitoring.tf` |
-| `contract_monitoring.notification_log` | Table of every notification sent. Also how repeats are skipped. | `infra/notifications.tf` |
-| `<asset>-profile`, `<asset>-quality`, `<asset>-insights` | Data scans on all three assets, results published to the catalog | `infra/scans.tf` |
-| `data-scanner` | Service account the scans run as | `infra/scans.tf` |
+| `raw` | `thelook_orders`, `thelook_users` | Copies of theLook, made with `bq cp` (`infra/source_data.tf`) |
+| `sales` | `orders`, `customers` | Golden tables, built with `CREATE OR REPLACE TABLE … AS SELECT` (`infra/data_product.tf`) |
+| `marketing` | `customer_orders` | Consumer view, built with `CREATE OR REPLACE VIEW` (`infra/data_product.tf`) |
+| `contract_monitoring` | `readiness_log`, `current_readiness` | Every readiness change, and the latest per asset and data product (`infra/monitoring.tf`) |
+| `contract_monitoring` | `notification_log` | Every notification sent. `notify-stewards` reads it to skip repeats (`infra/notifications.tf`). |
 
-## Checking a change
+The data product `sales-orders` holds the three `sales` and `marketing` objects as assets. Schema contracts are in `infra/contracts.tf`. The functions are in `functions/<name>/` and deploy through `infra/modules/function/`.
+
+## Verifying
 
 ```bash
 cd infra && tofu fmt -recursive && tofu validate && tofu plan
@@ -80,7 +69,7 @@ gcloud dataplex datascans run orders-quality --location=us-central1 --project="$
 
 ## Gotchas
 
-Each line is a guardrail. The reasons and the observed feed behaviour behind them are in [`docs/architecture.md`](docs/architecture.md#design-decisions).
+Each line is a guardrail. The reasons are in comments next to the code. The observed feed behaviour behind them is in [`docs/architecture.md`](docs/architecture.md#metadata-change-feed-behaviour).
 
 - **Build golden tables and views with `CREATE OR REPLACE` from a `terraform_data`,** never with `google_bigquery_table` or `google_bigquery_job`.
 - **Set the insights labels in every `CREATE OR REPLACE` statement** (`OPTIONS(labels=…)`). The statement drops labels, and the console's Insights tab needs them.
@@ -104,8 +93,4 @@ Removes the domain, including dataset contents. What stays behind, and how to re
 
 ## More
 
-| Doc | Covers |
-| --- | --- |
-| [`README.md`](README.md) | Human-facing overview, prerequisites, quickstart, cleanup |
-| [`docs/01-demo.md`](docs/01-demo.md) | The live walkthrough |
-| [`docs/architecture.md`](docs/architecture.md) | Data flow, design decisions, observed feed behaviour, failure modes |
+[`README.md`](README.md) is the human-facing overview. [`docs/`](docs/README.md) has the demo guide, the quick reference and the architecture. Engineering standards that apply to every repo live in the user-level agent toolkit, not here.

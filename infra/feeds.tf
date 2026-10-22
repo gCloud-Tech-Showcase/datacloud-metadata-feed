@@ -143,6 +143,8 @@ resource "google_pubsub_subscription" "push" {
     }
   }
 
+  # Push subscriptions rather than Eventarc triggers, so a failing function's
+  # messages land in a dead-letter topic instead of being lost.
   dead_letter_policy {
     dead_letter_topic     = google_pubsub_topic.dead_letter.id
     max_delivery_attempts = 5
