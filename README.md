@@ -13,21 +13,17 @@ See [`docs/`](docs/README.md) for the step-by-step guide and [`docs/quick.md`](d
 
 ## Architecture
 
+What happens when you change a table's schema:
+
 ```mermaid
 flowchart LR
-    TF["tofu apply<br/>(edited SQL)"] --> BQ["BigQuery table or view"]
-    BQ --> KC["Knowledge Catalog entry<br/>schema + schema-contract"]
-    KC --> F1["Feed: schema-changes"]
-    F1 --> CC["check-contract"]
-    CC -->|"asset-readiness"| KC
-    KC --> F2["Feed: readiness-changes"]
-    F2 --> RP["rollup-product"]
-    RP -->|"product-readiness"| DP["Data product entry"]
-    F2 --> NS["notify-stewards"]
-    NS --> NT["Topic: schema-change-notifications"]
+    A["You change a table<br/>BigQuery"] --> B["The catalog sees the change<br/>Metadata change feed"]
+    B --> C["The schema is compared with its contract<br/>Cloud Function"]
+    C --> D["The table and its data product<br/>become READY or BLOCKED<br/>Knowledge Catalog"]
+    D --> E["The stewards are notified<br/>Pub/Sub"]
 ```
 
-Details: [`docs/architecture.md`](docs/architecture.md).
+How the pieces are connected, step by step: [`docs/architecture.md`](docs/architecture.md).
 
 ## Prerequisites
 

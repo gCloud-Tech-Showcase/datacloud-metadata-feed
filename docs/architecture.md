@@ -6,6 +6,8 @@ How a schema change travels from `tofu apply` to a steward notification, and whi
 
 ## Pipeline Overview
 
+What gets built, and how it is connected.
+
 ```mermaid
 graph TB
     subgraph "BigQuery"
@@ -46,6 +48,8 @@ graph TB
 ---
 
 ## Data Flow
+
+In what order things happen when a table's schema changes, and which calls each function makes.
 
 ```mermaid
 sequenceDiagram
