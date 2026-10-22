@@ -8,7 +8,7 @@
 #   ./scripts/show-feed.sh                       # schema-changes-demo, up to 20 messages
 #   ./scripts/show-feed.sh readiness-changes     # the readiness feed instead
 #   ./scripts/show-feed.sh notifications         # schema change notifications for stewards
-#   ./scripts/show-feed.sh --clear               # drop the backlog on all three, before a demo
+#   ./scripts/show-feed.sh --clear               # drop the backlog on all three
 #   ./scripts/show-feed.sh --project=my-proj     # override project
 
 set -euo pipefail

@@ -12,7 +12,7 @@ cd infra && tofu apply     # zero required variables
 
 **Tofu layout: flat.** Everything is in `infra/*.tf`, with one apply and no `bootstrap/` stage. `infra/modules/function/` is the one local module.
 
-**No Dataform.** This is a deliberate exception to the domain template. Two tables and one view are not a pipeline, and keeping every change in Tofu makes the demo's producer workflow one edit and one apply.
+**No Dataform.** This is a deliberate exception to the domain template. Two tables and one view are not a pipeline, and keeping every change in Tofu makes the producer workflow one edit and one apply.
 
 **One project ID.** `project_id`'s default in `infra/variables.tf` drives the providers, the resources, the bucket names and `setup.sh`. Never hardcode it in `.tf` files or scripts. In commands, use a `PROJECT_ID` shell variable.
 
@@ -93,4 +93,4 @@ Removes the domain, including dataset contents. What stays behind, and how to re
 
 ## More
 
-[`README.md`](README.md) is the human-facing overview. [`docs/`](docs/README.md) has the demo guide, the quick reference and the architecture. Engineering standards that apply to every repo live in the user-level agent toolkit, not here.
+[`README.md`](README.md) is the human-facing overview. [`docs/`](docs/README.md) has the step-by-step guide, the quick reference and the architecture. Engineering standards that apply to every repo live in the user-level agent toolkit, not here.

@@ -6,8 +6,8 @@
 #   readiness-changes  feed: asset-readiness changed on any entry
 #                      -> push to rollup-product and to notify-stewards
 #
-# Each topic also has a `-demo` pull subscription that nothing consumes, so a
-# presenter can pull and ack messages without starving the functions.
+# Each topic also has a `-demo` pull subscription that nothing consumes, so you
+# can pull and ack messages without starving the functions.
 # =============================================================================
 
 locals {
@@ -101,7 +101,7 @@ resource "google_pubsub_subscription" "demo" {
   name  = "${each.key}-demo"
   topic = google_pubsub_topic.feed[each.key].id
 
-  # Acked messages stay seekable for a day, so a demo can replay them.
+  # Acked messages stay seekable for a day, so you can replay them.
   retain_acked_messages      = true
   message_retention_duration = "86400s"
   ack_deadline_seconds       = 10

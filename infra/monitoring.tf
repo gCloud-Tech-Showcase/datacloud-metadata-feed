@@ -1,7 +1,7 @@
 # =============================================================================
 # READINESS HISTORY
 # The catalog aspects hold the current state. This table keeps every change,
-# so the demo can show when an asset was blocked and when it was cleared.
+# so you can see when an asset was blocked and when it was cleared.
 # =============================================================================
 
 resource "google_bigquery_table" "readiness_log" {

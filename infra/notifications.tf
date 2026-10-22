@@ -17,7 +17,7 @@ resource "google_pubsub_subscription" "notifications_demo" {
   name  = "schema-change-notifications-demo"
   topic = google_pubsub_topic.notifications.id
 
-  # Acked messages stay seekable for a day, so a demo can replay them.
+  # Acked messages stay seekable for a day, so you can replay them.
   retain_acked_messages      = true
   message_retention_duration = "86400s"
   ack_deadline_seconds       = 10

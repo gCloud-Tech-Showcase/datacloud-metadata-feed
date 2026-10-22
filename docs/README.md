@@ -31,7 +31,7 @@ A data mesh with one data product, governed by Knowledge Catalog:
 
 | Guide | Covers |
 | --- | --- |
-| [Demo guide](01-demo.md) | The live demo, from `READY` to `BLOCKED` and back |
+| [Schema Changes](01-schema-changes.md) | Break the contracts, watch the catalog react, then fix them |
 | [Quick Reference](quick.md) | Copy-paste commands and queries, with sample output |
 | [Architecture](architecture.md) | Pipeline diagram, data flow, components, observed feed behaviour |
 

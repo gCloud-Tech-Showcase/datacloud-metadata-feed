@@ -176,7 +176,7 @@ resource "google_dataplex_datascan" "scan" {
   ]
 }
 
-# Starts the first run, so results are in the catalog before the demo.
+# Starts the first run, so results are in the catalog when the apply finishes.
 # Insights run after the profiles because Gemini grounds its descriptions in
 # profile results when they exist.
 resource "terraform_data" "first_scan_run" {

@@ -1,10 +1,10 @@
-# Demo Guide
+# Schema Changes
 
-The live demo, from `READY` to `BLOCKED` and back.
+Break the schema contracts on purpose, watch the catalog react, then fix them.
 
 ---
 
-The demo plays two roles. The **sales team** owns the golden tables and changes their SQL. The **platform team** watches readiness in Knowledge Catalog and receives the steward notifications. Every change goes through `tofu apply`, the same way a producer ships a change in real life.
+In this scenario, the **sales team** owns the golden tables and the **marketing team** builds a view on them. You make the changes as the producer. Every change is an edit in `infra/` and a `tofu apply`, the same way a producer ships a change in real life.
 
 Run all commands from the repository root, with `PROJECT_ID` set to your project:
 
@@ -42,7 +42,7 @@ On the `orders` entry, the **Details** tab shows `Schema contract` and `Asset re
 | **Data quality** | `orders-quality` | 6 rules, all passing |
 | **Insights** | `orders-insights` | Gemini-generated sample questions with SQL, grounded in the profile |
 
-`customer_orders` has profile and quality results too. Its catalog page has no **Insights** tab because it is a view. Open it in BigQuery Studio to show its insights.
+`customer_orders` has profile and quality results too. Its catalog page has no **Insights** tab because it is a view. To see its insights, open it in BigQuery Studio.
 
 ---
 
@@ -62,7 +62,7 @@ FROM `${var.project_id}.raw.thelook_orders`
 
 `orders` stays `READY`, with the reason `COLUMN_ADDED gender`. Consumers are not affected by a new column, so nothing is blocked.
 
-Show the feed message that triggered the check. The `-demo` subscription has its own copy of every message, so acking here does not affect the functions:
+Look at the feed message that triggered the check. The `-demo` subscription has its own copy of every message, so reading it here does not affect the functions:
 
 ```bash
 ./scripts/show-feed.sh
@@ -94,7 +94,7 @@ FROM `${var.project_id}.raw.thelook_orders`
 
 `orders` is `BLOCKED` with `COLUMN_DROPPED num_of_item`. A few seconds later, the second feed fires and the data product is `BLOCKED` too, naming `sales.orders`.
 
-Refresh both entries in the console to show the aspects.
+To see the new aspect values, refresh both entries in the console.
 
 ```bash
 ./scripts/show-feed.sh readiness-changes
@@ -111,7 +111,7 @@ gcloud dataplex datascans run orders-quality --location=us-central1 --project="$
 
 After about a minute, the run fails as a whole, with the message "column `num_of_item` configured in DataQualityRule doesn't exist in entity" (verified on 2026-10-20).
 
-Show the failed run in the scan's **Jobs history**. The feed flagged the change within seconds. The scan only catches it when it runs, and it stops evaluating the other rules.
+The failed run is in the scan's **Jobs history**. The feed flagged the change within seconds. The scan only catches it when it runs, and it stops evaluating the other rules.
 
 ---
 
@@ -147,13 +147,13 @@ The producers agree the new schemas with their consumers. In `infra/contracts.tf
 
 Updating the contract aspect is itself a catalog change, so the `schema-changes` feed fires and `check-contract` re-evaluates. Both assets return to `READY`, and then the data product does too.
 
-Show the `RESOLVED` notifications, which list what was resolved:
+The `RESOLVED` notifications list what was resolved:
 
 ```bash
 ./scripts/show-feed.sh notifications
 ```
 
-Show the history. In BigQuery Studio, with your project selected:
+To see the history, run these queries in BigQuery Studio, with your project selected:
 
 ```sql
 SELECT logged_at, level, name, status, contract_version, reasons
@@ -168,9 +168,9 @@ ORDER BY notified_at DESC;
 
 ---
 
-## Step 5: Reset for the next run
+## Step 5: Reset
 
-Warning: `git checkout` discards every uncommitted edit in these two files, not only the demo edits.
+Warning: `git checkout` discards every uncommitted edit in these two files, not only the edits from this guide.
 
 ```bash
 git checkout infra/data_product.tf infra/contracts.tf
@@ -180,18 +180,33 @@ gcloud dataplex datascans run orders-quality --location=us-central1 --project="$
 ./scripts/show-feed.sh --clear
 ```
 
-The apply reverts the SQL a moment before the contract, so `orders` can show `BLOCKED` for a few seconds before it settles on `READY`, with a matching `BREAKING` and `RESOLVED` notification. Re-running the quality scan replaces the failed run from step 2. Clearing the `-demo` subscriptions means the next audience sees only their own messages.
+The apply reverts the SQL a moment before the contract, so `orders` can show `BLOCKED` for a few seconds before it settles on `READY`, with a matching `BREAKING` and `RESOLVED` notification. Re-running the quality scan replaces the failed run from step 2. Clearing the `-demo` subscriptions means you see only the messages from your next change.
 
 ---
 
 ## Key Takeaways
 
-| What the audience saw | Product | Why it matters |
+| Capability | Technology | Business value |
 | --- | --- | --- |
-| A dropped column blocked the data product within seconds | Metadata change feeds, Cloud Functions | Consumers hear about a breaking change before they build on it |
-| An added column was reported but did not block | Schema contract aspect | New columns get a review, and nothing downstream stops |
-| The stewards got one message per change, with new and resolved reasons | Pub/Sub, data product access groups | The right people get the alert, without repeats |
-| Every change is in a BigQuery table | BigQuery | The history is one query away |
+| Detect a breaking schema change within seconds | Metadata change feeds, Cloud Functions | Consumers hear about a breaking change before they build on it |
+| Report an added column without blocking | Schema contract aspect | New columns get a review, and nothing downstream stops |
+| Mark the whole data product `BLOCKED` | Data product, `product-readiness` aspect | One status tells consumers whether the data product is safe to use |
+| Notify the stewards once per change | Pub/Sub, data product access groups | The right people get the alert, without repeats |
+| Keep every change in a table | BigQuery | The history is one query away |
+
+---
+
+## What's Next
+
+Try these on your own. Predict the result first, then check it with `./scripts/verify.sh` and `./scripts/show-feed.sh notifications`.
+
+| Experiment | How |
+| --- | --- |
+| Break a contract on the mode | In `infra/contracts.tf`, set `mode = "REQUIRED"` on `country` in the `customers` contract, then apply. The live column is `NULLABLE`, so you get `MODE_CHANGED`. |
+| Change a table outside Tofu | Run `bq --project_id="$PROJECT_ID" query --nouse_legacy_sql 'ALTER TABLE sales.customers DROP COLUMN last_name'`. To rebuild the table, run `tofu apply -replace='terraform_data.golden_table["customers"]'` in `infra/`. |
+| Put a contract on a table outside the data product | Add a contract for `raw.thelook_orders` to `local.contracts` in `infra/contracts.tf`, with only some of its columns. Then check which functions react, and which do not. |
+
+To learn how the pieces fit together, read the [architecture](architecture.md).
 
 ---
 

@@ -13,7 +13,7 @@ output "data_product" {
 }
 
 output "demo_subscriptions" {
-  description = "Pull subscriptions for showing feed messages live. Nothing else consumes them."
+  description = "Pull subscriptions for reading feed messages yourself. Nothing else consumes them."
   value       = { for k, s in google_pubsub_subscription.demo : k => s.name }
 }
 

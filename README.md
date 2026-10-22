@@ -9,7 +9,7 @@ There is no polling and no scheduled check. [Metadata change feeds](https://clou
 - **Seconds from change to alert:** a dropped column, a changed type or a changed mode blocks the asset and the data product
 - **A history in BigQuery:** every readiness change and every notification, ready to query
 
-See [`docs/`](docs/README.md) for the demo guide and [`docs/quick.md`](docs/quick.md) for copy-paste commands.
+See [`docs/`](docs/README.md) for the step-by-step guide and [`docs/quick.md`](docs/quick.md) for copy-paste commands.
 
 ## Architecture
 
@@ -68,7 +68,9 @@ Notifications go to the data product's `data-stewards` access group. This group 
 ./scripts/verify.sh --smoke          # a throwaway table with a broken contract becomes BLOCKED
 ```
 
-Then follow the [demo guide](docs/01-demo.md): six steps from `READY` to `BLOCKED` and back.
+## Try it
+
+Follow [Schema Changes](docs/01-schema-changes.md). You break the contracts on purpose, watch the catalog react, then fix them.
 
 ## What gets created
 
@@ -83,7 +85,7 @@ Everything is in `us-central1`.
 | Feeds `schema-changes`, `readiness-changes` | Each feed publishes to a Pub/Sub topic of the same name |
 | Cloud Functions `check-contract`, `rollup-product`, `notify-stewards` | Python 3.12. Pub/Sub pushes feed messages to them. |
 | Topic `schema-change-notifications` | The steward notifications |
-| `-demo` pull subscriptions | One per topic, for showing messages live. Nothing else reads them. |
+| `-demo` pull subscriptions | One per topic, so you can read the messages yourself. Nothing else reads them. |
 | Topic `feed-dead-letter` | Messages that failed 5 deliveries |
 | Profile, quality and insights scans | On all three assets, with results published to the catalog |
 | Service accounts | `drift-functions`, `function-builder`, `feed-push-invoker`, `data-scanner` |

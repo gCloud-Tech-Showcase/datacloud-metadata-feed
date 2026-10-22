@@ -154,4 +154,4 @@ Two related behaviours outside the feeds:
 
 ## Navigation
 
-[Demo guide](01-demo.md) | [Quick Reference](quick.md) | [Overview](README.md)
+[Schema Changes](01-schema-changes.md) | [Quick Reference](quick.md) | [Overview](README.md)

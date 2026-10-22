@@ -164,10 +164,10 @@ Cleared readiness-changes-demo
 Cleared schema-change-notifications-demo
 ```
 
-Do this before a demo, so that the audience sees only their own messages.
+Clear them so that you see only the messages from your next change.
 
 ---
 
 ## Navigation
 
-[← Overview](README.md) | [Demo guide](01-demo.md) | [Architecture](architecture.md)
+[← Overview](README.md) | [Schema Changes](01-schema-changes.md) | [Architecture](architecture.md)
