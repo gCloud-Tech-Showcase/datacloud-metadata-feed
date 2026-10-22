@@ -133,7 +133,6 @@ The code depends on these behaviours (verified on 2026-10-20 and 2026-10-21).
 | Creating a feed before the service agent's publisher grant propagates fails with `code 13`. | `time_sleep.dataplex_publisher_propagation` waits 90 seconds. |
 | A new feed can take up to 10 minutes to start publishing. | `time_sleep.feed_activation` delays the contracts on the first apply. |
 | `DROP TABLE` produced no message on the aspect-filtered feed. | A dropped asset does not block its data product. Not built (see [#3](https://github.com/gCloud-Tech-Showcase/datacloud-metadata-feed/issues/3)). |
-| Messages in the US multi-region were not delivered for two views. | The demo runs in `us-central1`, where every test delivered. `verify.sh --smoke` fails if the path breaks. |
 
 Two related behaviours outside the feeds:
 

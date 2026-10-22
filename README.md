@@ -90,7 +90,6 @@ Everything is in `us-central1`.
 ## Known limitations
 
 - A dropped table does not block its data product. The feed sends no message for `DROP TABLE` ([#3](https://github.com/gCloud-Tech-Showcase/datacloud-metadata-feed/issues/3)).
-- Feed messages for views were not delivered in the US multi-region. The demo runs in `us-central1`, where every test delivered (verified on 2026-10-21).
 
 ## Cleanup
 
