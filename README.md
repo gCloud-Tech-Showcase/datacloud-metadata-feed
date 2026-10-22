@@ -57,7 +57,7 @@ Set `project_id`'s default in `infra/variables.tf` to your project ID. That one 
 cd infra && tofu apply     # zero required variables
 ```
 
-The first apply takes about 15 minutes. It waits for IAM to propagate and for the new feeds to start publishing, then runs the first data scans.
+The first apply waits for IAM to propagate and for the new feeds to start publishing, then runs the first data scans.
 
 Notifications go to the data product's `data-stewards` access group. This group is optional. To use your own Google Groups, copy `infra/terraform.tfvars.example` to `infra/terraform.tfvars` and set the groups there. Without it, notifications are still published, with no recipient.
 

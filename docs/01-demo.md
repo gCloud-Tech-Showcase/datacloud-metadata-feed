@@ -2,8 +2,6 @@
 
 The live demo, from `READY` to `BLOCKED` and back.
 
-**Time:** about 20 minutes, most of it waiting for `tofu apply`
-
 ---
 
 The demo plays two roles. The **sales team** owns the golden tables and changes their SQL. The **platform team** watches readiness in Knowledge Catalog and receives the steward notifications. Every change goes through `tofu apply`, the same way a producer ships a change in real life.

@@ -6,7 +6,7 @@ Standalone demo: Schema Drift Alerts with Metadata Change Feeds. Feeds push BigQ
 
 ```bash
 ./infra/scripts/setup.sh   # APIs + versioned state bucket + tofu init
-cd infra && tofu apply     # zero required variables, ~15 min on first apply
+cd infra && tofu apply     # zero required variables
 ./scripts/verify.sh --expect READY
 ```
 
