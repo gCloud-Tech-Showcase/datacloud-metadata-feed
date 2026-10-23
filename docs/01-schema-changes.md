@@ -107,15 +107,26 @@ To see the new aspect values, refresh both entries in the console.
 
 The notification is `BREAKING` and lists `COLUMN_DROPPED num_of_item` as new. It goes to the `data-stewards` access group. Without access groups, the `to:` line says there is no recipient.
 
-The quality scan gives a second, slower signal for the same change. Re-run it:
+The quality scan gives a second, slower signal for the same change. Two of the six `orders` quality rules check `num_of_item`. Re-run the scan:
 
 ```bash
 gcloud dataplex datascans run orders-quality --location=us-central1 --project="$PROJECT_ID"
 ```
 
-After about a minute, the run fails as a whole, with the message "column `num_of_item` configured in DataQualityRule doesn't exist in entity" (verified on 2026-10-20).
+After about a minute, the run fails as a whole. The two rules refer to a column that no longer exists, so the scan does not evaluate any of the six rules. To see the failed run and its message:
 
-The failed run is in the scan's **Jobs history**. The feed flagged the change within seconds. The scan only catches it when it runs, and it stops evaluating the other rules.
+```bash
+JOB_ID=$(gcloud dataplex datascans jobs list --datascan=orders-quality --location=us-central1 --project="$PROJECT_ID" --limit=1 --format='value(name)')
+gcloud dataplex datascans jobs describe "$JOB_ID" --datascan=orders-quality --location=us-central1 --project="$PROJECT_ID" --format='value(state,message)'
+```
+
+```text
+FAILED	column `num_of_item` configured in DataQualityRule doesn't exist in entity `<project>.sales.orders`
+```
+
+The **Data Quality** tab on the `orders` entry does not change. It shows the latest published result, and a failed run publishes none, so the tab still shows the last successful run at 100% (verified on 2026-10-23).
+
+Compare the two signals. The feed flagged the change within seconds and named the column. The scan only catches it when it runs, and then no rule gives a result.
 
 ---
 
@@ -184,7 +195,7 @@ gcloud dataplex datascans run orders-quality --location=us-central1 --project="$
 ./scripts/show-feed.sh --clear
 ```
 
-The apply reverts the SQL a moment before the contracts, so an asset can show `BLOCKED` for a few seconds before it settles on `READY`. You may see a matching `BREAKING` and `RESOLVED` notification. If the asset is `READY` again before `notify-stewards` reads it, there is no notification. Re-running the quality scan replaces the failed run from step 2. Clearing the `-demo` subscriptions means you see only the messages from your next change.
+The apply reverts the SQL a moment before the contracts, so an asset can show `BLOCKED` for a few seconds before it settles on `READY`. You may see a matching `BREAKING` and `RESOLVED` notification. If the asset is `READY` again before `notify-stewards` reads it, there is no notification. Re-running the quality scan gives a new successful run, so the latest job is no longer the failed one from Step 2. Clearing the `-demo` subscriptions means you see only the messages from your next change.
 
 ---
 
