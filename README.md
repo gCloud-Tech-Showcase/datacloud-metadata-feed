@@ -3,9 +3,6 @@
 <!-- SKELETON: replace the content, keep the structure. This is the
      human-facing walkthrough; AGENTS.md is the agent-facing one. -->
 
-> One-paragraph pitch: what this domain does, which Google Cloud products it
-> uses, and why someone would look at it.
-
 Standalone and self-contained — clone it, point it at your own GCP project, and
 `tofu apply` builds everything including the data.
 
