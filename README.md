@@ -2,7 +2,7 @@
 
 Catch a breaking schema change before it reaches the teams that use the data. A producer changes a golden table in BigQuery. Within seconds, Knowledge Catalog marks the table and its data product `BLOCKED`, gives the reason, and notifies the data product's stewards.
 
-There is no polling and no scheduled check. [Metadata change feeds](https://cloud.google.com/knowledge-catalog/docs/metadata-change-feeds-overview) push every catalog change to Pub/Sub, and three small Cloud Functions do the rest. Clone the repo, point it at your own GCP project, and run `tofu apply`.
+There is no polling and no scheduled check. [Metadata change feeds](https://docs.cloud.google.com/dataplex/docs/metadata-change-feeds-overview) push every catalog change to Pub/Sub, and three small Cloud Functions do the rest. Clone the repo, point it at your own GCP project, and run `tofu apply`.
 
 - **One data product, three assets:** two tables and one view, built from a copy of [theLook eCommerce](https://console.cloud.google.com/marketplace/product/bigquery-public-data/thelook-ecommerce)
 - **A schema contract on each asset:** the columns, types and modes that producers and consumers agreed

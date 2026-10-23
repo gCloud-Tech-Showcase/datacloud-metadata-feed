@@ -33,6 +33,6 @@ A data mesh with one data product, governed by Knowledge Catalog:
 | --- | --- |
 | [Schema Changes](01-schema-changes.md) | Break the contracts, watch the catalog react, then fix them |
 | [Quick Reference](quick.md) | Copy-paste commands and queries, with sample output |
-| [Architecture](architecture.md) | Pipeline diagram, data flow, components, observed feed behaviour |
+| [Architecture](architecture.md) | Pipeline diagram, data flow, components, message formats, observed feed behaviour |
 
 The source data is a copy of theLook eCommerce, made by `tofu apply`. See the [repository README](../README.md) for setup.

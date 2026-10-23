@@ -75,7 +75,25 @@ The message lists the aspects that changed, but not what changed in them. That i
 
 ---
 
-## 4. Show the steward notifications
+## 4. Read a raw feed message
+
+```bash
+gcloud pubsub subscriptions pull schema-changes-demo --project="$PROJECT_ID" --limit=1 --format=json
+gcloud pubsub subscriptions pull schema-changes-demo --project="$PROJECT_ID" --limit=1 \
+  --format='value(message.data.decode(base64))'
+```
+
+The first command prints the whole Pub/Sub message, with the payload base64-encoded. The second prints only the decoded payload:
+
+```json
+{"entryName":"projects/<project-number>/locations/us-central1/entryGroups/@bigquery/entries/d80e9b91-5763-4a55-bb07-241569859e6f","fullQualifiedName":"bigquery:<project>.sales.orders","updatedAspects":["projects/655216118709/locations/global/aspectTypes/schema","projects/655216118709/locations/global/aspectTypes/storage","projects/655216118709/locations/global/aspectTypes/bigquery-policy","projects/655216118709/locations/global/aspectTypes/bigquery-table"]}
+```
+
+Neither command acknowledges the message, so it comes back after 10 seconds. Every field is described in [Message Formats](architecture.md#message-formats).
+
+---
+
+## 5. Show the steward notifications
 
 ```bash
 ./scripts/show-feed.sh notifications
@@ -95,7 +113,7 @@ If you did not set access groups in `infra/terraform.tfvars`, the recipient line
 
 ---
 
-## 5. Query the current readiness
+## 6. Query the current readiness
 
 ```bash
 bq --project_id="$PROJECT_ID" query --nouse_legacy_sql \
@@ -120,7 +138,7 @@ The `WHERE` clause hides the throwaway tables from `verify.sh --smoke`.
 
 ---
 
-## 6. Query the notification history
+## 7. Query the notification history
 
 ```bash
 bq --project_id="$PROJECT_ID" query --nouse_legacy_sql \
@@ -142,7 +160,7 @@ bq --project_id="$PROJECT_ID" query --nouse_legacy_sql \
 
 ---
 
-## 7. Re-run a data scan
+## 8. Re-run a data scan
 
 ```bash
 gcloud dataplex datascans run orders-quality --location=us-central1 --project="$PROJECT_ID"
@@ -152,7 +170,7 @@ The results show on the asset's **Data quality** tab in Knowledge Catalog after 
 
 ---
 
-## 8. Clear the demo subscriptions
+## 9. Clear the demo subscriptions
 
 ```bash
 ./scripts/show-feed.sh --clear

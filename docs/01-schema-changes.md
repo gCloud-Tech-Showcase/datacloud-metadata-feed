@@ -66,7 +66,68 @@ FROM `${var.project_id}.raw.thelook_orders`
 
 `orders` stays `READY`, with the reason `COLUMN_ADDED gender`. Consumers are not affected by a new column, so nothing is blocked.
 
-Look at the feed message that triggered the check. The `-demo` subscription has its own copy of every message, so reading it here does not affect the functions:
+### Optional: look inside the feed message
+
+Do this before you run `show-feed.sh`, which acknowledges the messages it prints. The feed sends a plain Pub/Sub message, so you can read it like any other.
+
+In the console, open **Pub/Sub**, then **Subscriptions**, then `schema-changes-demo`. On the **Messages** tab, leave **Enable ack messages** cleared and click **Pull**. The console decodes the payload into **Message body**, and lists the attributes next to it (verified on 2026-10-23).
+
+In the terminal, pull the raw message:
+
+```bash
+gcloud pubsub subscriptions pull schema-changes-demo --project="$PROJECT_ID" --limit=1 --format=json
+```
+
+```json
+[
+  {
+    "ackId": "...",
+    "message": {
+      "attributes": {
+        "entry_change_type": "UPDATE",
+        "entry_type": "projects/655216118709/locations/global/entryTypes/bigquery-table",
+        "feed_name": "projects/<project-number>/locations/us-central1/metadataFeeds/schema-changes",
+        "timestamp": "2026-10-23T18:15:50.794431Z"
+      },
+      "data": "eyJlbnRyeU5hbWUiOiJwcm9qZWN0cy8...",
+      "messageId": "22440586900560602",
+      "publishTime": "2026-10-23T18:15:51.054Z"
+    }
+  }
+]
+```
+
+The payload in `data` is base64-encoded JSON. To decode it:
+
+```bash
+gcloud pubsub subscriptions pull schema-changes-demo --project="$PROJECT_ID" --limit=1 \
+  --format='value(message.data.decode(base64))'
+```
+
+```json
+{
+  "entryName": "projects/<project-number>/locations/us-central1/entryGroups/@bigquery/entries/d80e9b91-5763-4a55-bb07-241569859e6f",
+  "fullQualifiedName": "bigquery:<project>.sales.orders",
+  "updatedAspects": [
+    "projects/655216118709/locations/global/aspectTypes/schema",
+    "projects/655216118709/locations/global/aspectTypes/storage",
+    "projects/655216118709/locations/global/aspectTypes/bigquery-policy",
+    "projects/655216118709/locations/global/aspectTypes/bigquery-table"
+  ]
+}
+```
+
+Neither command acknowledges the message, so it comes back after 10 seconds and `show-feed.sh` still prints it. Three things to notice:
+
+| What you see | What it means for the functions |
+| --- | --- |
+| The message names the entry and the aspects that changed, but not what changed | `check-contract` reads the entry and compares the live schema with the contract |
+| `updatedAspects` lists `schema` and three other system aspects | BigQuery lists them on every table update, even when the schema did not change. It is not a schema-change signal. |
+| `entryName` ends in an opaque ID, not the table path | The functions rebuild the entry name from `fullQualifiedName` |
+
+The format of every message in this demo is in [Message Formats](architecture.md#message-formats).
+
+Now look at the same message with `show-feed.sh`, which prints one line per message. The `-demo` subscription has its own copy of every message, so reading it here does not affect the functions:
 
 ```bash
 ./scripts/show-feed.sh

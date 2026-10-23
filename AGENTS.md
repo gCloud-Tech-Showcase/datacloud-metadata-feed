@@ -74,7 +74,7 @@ Each line is a guardrail. The reasons are in comments next to the code. The obse
 - **Build golden tables and views with `CREATE OR REPLACE` from a `terraform_data`,** never with `google_bigquery_table` or `google_bigquery_job`.
 - **Set the insights labels in every `CREATE OR REPLACE` statement** (`OPTIONS(labels=…)`). The statement drops labels, and the console's Insights tab needs them.
 - **Use the project-number form in feed filters** (`projects/655216118709/locations/global/...`). The `dataplex-types` alias matches nothing.
-- **Rebuild entry names from `fullQualifiedName`.** The event's `entryName` is an opaque ID on updates.
+- **Rebuild entry names from `fullQualifiedName`.** The event's `entryName` is an opaque ID on updates. The field has no "y", unlike the published format.
 - **Never treat `updatedAspects` as a schema-change signal.** It lists `schema` on every table update.
 - **Keep the two readiness aspect types separate,** or `rollup-product` triggers itself.
 - **Make anything a feed must see on first apply depend on `time_sleep.feed_activation`.**
@@ -93,4 +93,4 @@ Removes the domain, including dataset contents. What stays behind, and how to re
 
 ## More
 
-[`README.md`](README.md) is the human-facing overview. [`docs/`](docs/README.md) has the step-by-step guide, the quick reference and the architecture. Engineering standards that apply to every repo live in the user-level agent toolkit, not here.
+[`README.md`](README.md) is the human-facing overview. [`docs/`](docs/README.md) has the step-by-step guide, the quick reference and the architecture, including the message formats. Engineering standards that apply to every repo live in the user-level agent toolkit, not here.
