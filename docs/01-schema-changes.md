@@ -180,7 +180,7 @@ gcloud dataplex datascans run orders-quality --location=us-central1 --project="$
 ./scripts/show-feed.sh --clear
 ```
 
-The apply reverts the SQL a moment before the contract, so `orders` can show `BLOCKED` for a few seconds before it settles on `READY`, with a matching `BREAKING` and `RESOLVED` notification. Re-running the quality scan replaces the failed run from step 2. Clearing the `-demo` subscriptions means you see only the messages from your next change.
+The apply reverts the SQL a moment before the contracts, so an asset can show `BLOCKED` for a few seconds before it settles on `READY`. You may see a matching `BREAKING` and `RESOLVED` notification. If the asset is `READY` again before `notify-stewards` reads it, there is no notification. Re-running the quality scan replaces the failed run from step 2. Clearing the `-demo` subscriptions means you see only the messages from your next change.
 
 ---
 
@@ -204,7 +204,18 @@ Try these on your own. Predict the result first, then check it with `./scripts/v
 | --- | --- |
 | Break a contract on the mode | In `infra/contracts.tf`, set `mode = "REQUIRED"` on `country` in the `customers` contract, then apply. The live column is `NULLABLE`, so you get `MODE_CHANGED`. |
 | Change a table outside Tofu | Run `bq --project_id="$PROJECT_ID" query --nouse_legacy_sql 'ALTER TABLE sales.customers DROP COLUMN last_name'`. To rebuild the table, run `tofu apply -replace='terraform_data.golden_table["customers"]'` in `infra/`. |
-| Put a contract on a table outside the data product | Add a contract for `raw.thelook_orders` to `local.contracts` in `infra/contracts.tf`, with only some of its columns. Then check which functions react, and which do not. |
+| Put a contract on a table outside the data product | Add a contract for `raw.thelook_orders` to `local.contracts` in `infra/contracts.tf`, with only some of its columns. Then check which functions react, and which do not. Undo steps are below the table. |
+
+To undo the contract on `raw.thelook_orders`, remove it from `infra/contracts.tf` and apply. Tofu cannot delete aspects from an entry that BigQuery owns, so remove the contract and readiness aspects yourself:
+
+```bash
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+gcloud dataplex entries update "bigquery.googleapis.com/projects/$PROJECT_ID/datasets/raw/tables/thelook_orders" \
+  --entry-group=@bigquery --location=us-central1 --project="$PROJECT_ID" \
+  --remove-aspects="$PROJECT_NUMBER.us-central1.schema-contract@*,$PROJECT_NUMBER.us-central1.asset-readiness@*"
+```
+
+The rows in `contract_monitoring.readiness_log` stay, so `current_readiness` still lists the table.
 
 To learn how the pieces fit together, read the [architecture](architecture.md).
 

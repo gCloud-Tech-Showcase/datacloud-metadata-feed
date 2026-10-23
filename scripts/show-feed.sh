@@ -5,7 +5,7 @@
 # message away from the functions.
 #
 # Usage:
-#   ./scripts/show-feed.sh                       # schema-changes-demo, up to 20 messages
+#   ./scripts/show-feed.sh                       # every waiting message on schema-changes-demo
 #   ./scripts/show-feed.sh readiness-changes     # the readiness feed instead
 #   ./scripts/show-feed.sh notifications         # schema change notifications for stewards
 #   ./scripts/show-feed.sh --clear               # drop the backlog on all three
@@ -27,6 +27,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# One pull can return fewer messages than are waiting, so keep pulling until a
+# pull comes back empty. Prints one JSON array of every message pulled.
+pull_all() {
+  local subscription=$1 batch all="[]"
+  for _ in $(seq 1 10); do
+    batch="$(gcloud pubsub subscriptions pull "$subscription" --project="$PROJECT_ID" --auto-ack --limit=50 --format=json)"
+    [[ -z "$batch" || "$batch" == "[]" ]] && break
+    all="$(python3 -I -c 'import json, sys; print(json.dumps(json.loads(sys.argv[1]) + json.loads(sys.argv[2])))' "$all" "$batch")"
+  done
+  echo "$all"
+}
+
 if [[ "$CLEAR" == true ]]; then
   for feed in schema-changes readiness-changes schema-change-notifications; do
     gcloud pubsub subscriptions seek "${feed}-demo" --project="$PROJECT_ID" \
@@ -37,7 +49,7 @@ if [[ "$CLEAR" == true ]]; then
 fi
 
 if [[ "$FEED" == "notifications" ]]; then
-  gcloud pubsub subscriptions pull schema-change-notifications-demo --project="$PROJECT_ID" --auto-ack --limit=20 --format=json \
+  pull_all schema-change-notifications-demo \
     | python3 -I -c '
 import base64, json, sys
 
@@ -61,7 +73,7 @@ for m in sorted(messages, key=lambda m: m["message"]["publishTime"]):
   exit 0
 fi
 
-gcloud pubsub subscriptions pull "${FEED}-demo" --project="$PROJECT_ID" --auto-ack --limit=20 --format=json \
+pull_all "${FEED}-demo" \
   | python3 -I -c '
 import base64, json, sys
 
