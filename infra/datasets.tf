@@ -32,5 +32,5 @@ resource "google_bigquery_dataset" "domains" {
     stage   = replace(each.key, "_", "-")
   }
 
-  depends_on = [google_project_service.apis["bigquery.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }

@@ -35,7 +35,7 @@ resource "google_storage_bucket" "function_source" {
 
   labels = { domain = "metadata-feed" }
 
-  depends_on = [google_project_service.apis["storage.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }
 
 data "archive_file" "function" {
@@ -58,6 +58,8 @@ resource "google_storage_bucket_object" "function_source" {
 resource "google_service_account" "functions" {
   account_id   = "drift-functions"
   display_name = "Runtime identity for the schema drift functions"
+
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_project_iam_member" "functions" {
@@ -82,6 +84,8 @@ resource "google_bigquery_dataset_iam_member" "functions_log_writer" {
 resource "google_service_account" "function_builder" {
   account_id   = "function-builder"
   display_name = "Cloud Build identity for the function containers"
+
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_project_iam_member" "function_builder" {
@@ -93,6 +97,8 @@ resource "google_project_iam_member" "function_builder" {
 resource "google_service_account" "push_invoker" {
   account_id   = "feed-push-invoker"
   display_name = "Identity Pub/Sub uses to push feed messages to the functions"
+
+  depends_on = [time_sleep.api_propagation]
 }
 
 module "check_contract" {
@@ -110,7 +116,7 @@ module "check_contract" {
   environment             = local.function_environment
 
   depends_on = [
-    google_project_service.apis,
+    time_sleep.api_propagation,
     google_project_iam_member.function_builder,
   ]
 }

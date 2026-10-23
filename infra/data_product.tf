@@ -125,7 +125,7 @@ resource "google_dataplex_data_product" "sales_orders" {
     }
   }
 
-  depends_on = [google_project_service.apis["dataplex.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_dataplex_data_product_data_asset" "sales_orders" {

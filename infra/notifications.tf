@@ -10,7 +10,7 @@ resource "google_pubsub_topic" "notifications" {
   name   = "schema-change-notifications"
   labels = { domain = "metadata-feed" }
 
-  depends_on = [google_project_service.apis["pubsub.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_pubsub_subscription" "notifications_demo" {

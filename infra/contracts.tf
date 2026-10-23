@@ -96,7 +96,7 @@ resource "google_dataplex_aspect_type" "schema_contract" {
     ]
   })
 
-  depends_on = [google_project_service.apis["dataplex.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_dataplex_aspect_type" "asset_readiness" {
@@ -130,7 +130,7 @@ resource "google_dataplex_aspect_type" "asset_readiness" {
     ]
   })
 
-  depends_on = [google_project_service.apis["dataplex.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_dataplex_aspect_type" "product_readiness" {
@@ -161,7 +161,7 @@ resource "google_dataplex_aspect_type" "product_readiness" {
     ]
   })
 
-  depends_on = [google_project_service.apis["dataplex.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }
 
 data "google_project" "current" {}

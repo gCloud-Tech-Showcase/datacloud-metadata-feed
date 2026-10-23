@@ -29,3 +29,13 @@ resource "google_project_service" "apis" {
   # that outlives this domain.
   disable_on_destroy = false
 }
+
+# Enabling a service returns before the service accepts calls. On a new
+# project, resources created right after enablement failed with
+# "API has not been used in project" or a 403 on create. Every resource that
+# calls one of these services depends on this wait instead of on the service.
+resource "time_sleep" "api_propagation" {
+  create_duration = "90s"
+
+  depends_on = [google_project_service.apis]
+}

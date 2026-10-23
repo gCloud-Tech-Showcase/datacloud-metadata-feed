@@ -46,14 +46,14 @@ resource "google_pubsub_topic" "feed" {
   name   = each.key
   labels = { domain = "metadata-feed" }
 
-  depends_on = [google_project_service.apis["pubsub.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_project_service_identity" "dataplex" {
   provider = google-beta
   service  = "dataplex.googleapis.com"
 
-  depends_on = [google_project_service.apis["dataplex.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_pubsub_topic_iam_member" "dataplex_publisher" {
@@ -115,7 +115,7 @@ resource "google_pubsub_topic" "dead_letter" {
   name   = "feed-dead-letter"
   labels = { domain = "metadata-feed" }
 
-  depends_on = [google_project_service.apis["pubsub.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_pubsub_subscription" "dead_letter" {
@@ -173,7 +173,7 @@ resource "google_project_service_identity" "pubsub" {
   provider = google-beta
   service  = "pubsub.googleapis.com"
 
-  depends_on = [google_project_service.apis["pubsub.googleapis.com"]]
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_pubsub_topic_iam_member" "pubsub_dead_letter_publisher" {

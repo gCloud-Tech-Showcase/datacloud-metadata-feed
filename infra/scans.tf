@@ -53,6 +53,8 @@ locals {
 resource "google_service_account" "data_scanner" {
   account_id   = "data-scanner"
   display_name = "Identity the profile, quality and insights scans run as"
+
+  depends_on = [time_sleep.api_propagation]
 }
 
 resource "google_project_iam_member" "data_scanner_job_user" {
@@ -78,7 +80,7 @@ resource "time_sleep" "scanner_iam_propagation" {
     google_service_account_iam_member.dataplex_impersonates_scanner,
     google_project_iam_member.data_scanner_job_user,
     google_bigquery_dataset_iam_member.data_scanner_viewer,
-    google_project_service.apis["cloudaicompanion.googleapis.com"],
+    time_sleep.api_propagation,
   ]
 }
 
