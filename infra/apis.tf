@@ -12,6 +12,7 @@ resource "google_project_service" "apis" {
     "serviceusage.googleapis.com",         # enable/disable of the services below
 
     "bigquery.googleapis.com",         # source copies, golden tables, view, readiness log
+    "datalineage.googleapis.com",      # lineage from raw to sales to marketing
     "dataplex.googleapis.com",         # Knowledge Catalog: aspects, data product, metadata feeds
     "pubsub.googleapis.com",           # feed topics, push and demo subscriptions
     "cloudfunctions.googleapis.com",   # check-contract, rollup-product, notify-stewards
