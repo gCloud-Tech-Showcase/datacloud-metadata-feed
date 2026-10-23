@@ -81,6 +81,7 @@ Each line is a guardrail. The reasons are in comments next to the code. The obse
 - **Keep every resource in `var.region`.** A data product and its assets must share a location.
 - **Never import across `functions/<name>/` directories.** Each deploys on its own, so helpers are repeated.
 - **Keep access groups in `infra/terraform.tfvars`** (gitignored). Never commit real group or user emails.
+- **Keep the line numbers in `docs/01-schema-changes.md` in step with `infra/data_product.tf` and `infra/contracts.tf`.** The guide points at exact lines, so a change that shifts them updates the guide too.
 - **Non-interactive shells don't load `.envrc`**, so pass `--project` to `bq` and `gcloud`.
 
 ## Teardown

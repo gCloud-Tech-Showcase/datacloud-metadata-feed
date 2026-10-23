@@ -62,12 +62,20 @@ The same entry also carries the scan results that `tofu apply` started (verified
 
 ## Step 1: Add a column (not breaking)
 
-In `infra/data_product.tf`, add `gender` to the `orders` query:
+In `infra/data_product.tf`, line 11, in the `orders` query, add `gender`:
 
-```sql
-SELECT order_id, user_id, status, created_at, num_of_item, gender
-FROM `${var.project_id}.raw.thelook_orders`
+```diff
+-      SELECT order_id, user_id, status, created_at, num_of_item
++      SELECT order_id, user_id, status, created_at, num_of_item, gender
 ```
+
+Or make the same edit from the terminal:
+
+```bash
+perl -pi -e 's/created_at, num_of_item$/created_at, num_of_item, gender/' infra/data_product.tf
+```
+
+Then apply and check:
 
 ```bash
 (cd infra && tofu apply)
@@ -159,12 +167,20 @@ The stewards still hear about it, because the contract is broken and the new col
 
 ## Step 2: Drop a column (breaking)
 
-Remove `num_of_item` from the same query:
+In `infra/data_product.tf`, line 11, remove `num_of_item` from the same query:
 
-```sql
-SELECT order_id, user_id, status, created_at, gender
-FROM `${var.project_id}.raw.thelook_orders`
+```diff
+-      SELECT order_id, user_id, status, created_at, num_of_item, gender
++      SELECT order_id, user_id, status, created_at, gender
 ```
+
+Or make the same edit from the terminal:
+
+```bash
+perl -pi -e 's/created_at, num_of_item, gender$/created_at, gender/' infra/data_product.tf
+```
+
+Then apply and check:
 
 ```bash
 (cd infra && tofu apply)
@@ -215,11 +231,20 @@ Compare the two signals. The feed flagged the change within seconds and named th
 
 ## Step 3: Change a type in the consumer view (breaking)
 
-In `infra/data_product.tf`, in the `customer_orders_view` query, cast the count to `NUMERIC`:
+In `infra/data_product.tf`, line 22, in the `customer_orders_view` query, cast the count to `NUMERIC`:
 
-```sql
-SELECT c.user_id, c.country, CAST(COUNT(o.order_id) AS NUMERIC) AS order_count
+```diff
+-    SELECT c.user_id, c.country, COUNT(o.order_id) AS order_count
++    SELECT c.user_id, c.country, CAST(COUNT(o.order_id) AS NUMERIC) AS order_count
 ```
+
+Or make the same edit from the terminal:
+
+```bash
+perl -pi -e 's/c\.country, COUNT\(o\.order_id\) AS order_count/c.country, CAST(COUNT(o.order_id) AS NUMERIC) AS order_count/' infra/data_product.tf
+```
+
+Then apply and check:
 
 ```bash
 (cd infra && tofu apply)
@@ -237,10 +262,50 @@ SELECT c.user_id, c.country, CAST(COUNT(o.order_id) AS NUMERIC) AS order_count
 
 ## Step 4: Revise the contracts
 
-The producers agree the new schemas with their consumers. In `infra/contracts.tf`:
+The producers agree the new schemas with their consumers. In `infra/contracts.tf`, make four edits.
 
-- **`orders`:** set `version = "2"`, remove the `num_of_item` field, and add `{ name = "gender", dataType = "STRING", mode = "NULLABLE" }`.
-- **`customer_orders`:** set `version = "2"`, and change `order_count` to `dataType = "NUMERIC"`.
+In the `orders` contract, line 22 and line 28:
+
+```diff
+-      version    = "1"
++      version    = "2"
+```
+
+```diff
+-        { name = "num_of_item", dataType = "INTEGER", mode = "NULLABLE" },
++        { name = "gender", dataType = "STRING", mode = "NULLABLE" },
+```
+
+In the `customer_orders` contract, line 50 and line 54:
+
+```diff
+-      version    = "1"
++      version    = "2"
+```
+
+```diff
+-        { name = "order_count", dataType = "INTEGER", mode = "NULLABLE" },
++        { name = "order_count", dataType = "NUMERIC", mode = "NULLABLE" },
+```
+
+Leave the `customers` contract unchanged, including its `version = "1"` on line 36.
+
+Or make all four edits from the terminal:
+
+```bash
+perl -pi -e '
+  if (/^    orders = \{/ .. /^    \}/) {
+    s/version    = "1"/version    = "2"/;
+    s/\{ name = "num_of_item", dataType = "INTEGER", mode = "NULLABLE" \}/{ name = "gender", dataType = "STRING", mode = "NULLABLE" }/;
+  }
+  if (/^    customer_orders = \{/ .. /^    \}/) {
+    s/version    = "1"/version    = "2"/;
+    s/\{ name = "order_count", dataType = "INTEGER"/{ name = "order_count", dataType = "NUMERIC"/;
+  }
+' infra/contracts.tf
+```
+
+Then apply and check:
 
 ```bash
 (cd infra && tofu apply)
@@ -304,9 +369,41 @@ Try these on your own. Predict the result first, then check it with `./scripts/v
 
 | Experiment | How |
 | --- | --- |
-| Break a contract on the mode | In `infra/contracts.tf`, set `mode = "REQUIRED"` on `country` in the `customers` contract, then apply. The live column is `NULLABLE`, so you get `MODE_CHANGED`. |
+| Break a contract on the mode | Make `country` `REQUIRED` in the `customers` contract (below), then apply. The live column is `NULLABLE`, so you get `MODE_CHANGED`. |
 | Change a table outside Tofu | Run `bq --project_id="$PROJECT_ID" query --nouse_legacy_sql 'ALTER TABLE sales.customers DROP COLUMN last_name'`. To rebuild the table, run `tofu apply -replace='terraform_data.golden_table["customers"]'` in `infra/`. |
-| Put a contract on a table outside the data product | Add a contract for `raw.thelook_orders` to `local.contracts` in `infra/contracts.tf`, with only some of its columns. Then check which functions react, and which do not. Undo steps are below the table. |
+| Put a contract on a table outside the data product | Add the contract for `raw.thelook_orders` (below), then apply. Then check which functions react, and which do not. |
+
+**Break a contract on the mode.** In `infra/contracts.tf`, line 41, in the `customers` contract:
+
+```diff
+-        { name = "country", dataType = "STRING", mode = "NULLABLE" },
++        { name = "country", dataType = "STRING", mode = "REQUIRED" },
+```
+
+Or make the same edit from the terminal. It changes only the `customers` contract, not `country` in `customer_orders`:
+
+```bash
+perl -pi -e 'if (/^    customers = \{/ .. /^    \}/) { s/mode = "NULLABLE" \}(,?)$/mode = "REQUIRED" }$1/ if /"country"/ }' infra/contracts.tf
+```
+
+To undo it, run `git checkout infra/contracts.tf` and apply.
+
+**Put a contract on a table outside the data product.** In `infra/contracts.tf`, paste this block on the line after `contracts = {` (line 17). It agrees on three of the table's nine columns:
+
+```hcl
+    raw_orders = {
+      dataset    = "raw"
+      table      = "thelook_orders"
+      entry_type = "bigquery-table"
+      version    = "1"
+      fields = [
+        { name = "order_id", dataType = "INTEGER", mode = "NULLABLE" },
+        { name = "user_id", dataType = "INTEGER", mode = "NULLABLE" },
+        { name = "status", dataType = "STRING", mode = "NULLABLE" },
+      ]
+    }
+
+```
 
 To undo the contract on `raw.thelook_orders`, remove it from `infra/contracts.tf` and apply. Tofu cannot delete aspects from an entry that BigQuery owns, so remove the contract and readiness aspects yourself:
 
