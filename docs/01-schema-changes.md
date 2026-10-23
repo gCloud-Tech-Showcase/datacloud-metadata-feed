@@ -32,7 +32,11 @@ Allow about 10 seconds after each apply for the feeds and functions to finish. T
 ./scripts/show-feed.sh --clear
 ```
 
-In the console, open **Knowledge Catalog**, then the **Sales Orders** data product. Its aspects show `Product readiness`. If you set access groups in `infra/terraform.tfvars`, they include `data-stewards`. Open `orders` from the data product's **Assets** tab.
+In the console, open **Knowledge Catalog**, then the **Sales Orders** data product. Its **Aspects** tab shows `Product readiness`. If you set access groups in `infra/terraform.tfvars`, the **Access groups & permissions** tab includes `data-stewards`.
+
+The data product's **Contract** tab stays empty. It holds Knowledge Catalog's own contract for the whole data product, which this demo does not use. The schema contracts in this demo are aspects on each asset.
+
+Open `orders` from the data product's **Assets** tab.
 
 On the `orders` entry, the **Details** tab shows `Schema contract` and `Asset readiness` among the aspects. The same entry also carries the scan results that `tofu apply` started (verified on 2026-10-20):
 
