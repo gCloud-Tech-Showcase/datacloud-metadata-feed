@@ -25,6 +25,12 @@ flowchart LR
 
 How the pieces are connected, step by step: [`docs/architecture.md`](docs/architecture.md).
 
+The data product in Knowledge Catalog, after one asset lost a column and another changed a type:
+
+![The Aspects tab of the Sales Orders data product: Product readiness BLOCKED, with reasons for marketing.customer_orders and sales.orders](docs/images/data-product-blocked.png)
+
+*Console on 2026-10-23.*
+
 ## Prerequisites
 
 | Requirement | Notes |

@@ -93,4 +93,4 @@ Removes the domain, including dataset contents. What stays behind, and how to re
 
 ## More
 
-[`README.md`](README.md) is the human-facing overview. [`docs/`](docs/README.md) has the step-by-step guide, the quick reference and the architecture, including the message formats. Engineering standards that apply to every repo live in the user-level agent toolkit, not here.
+[`README.md`](README.md) is the human-facing overview. [`docs/`](docs/README.md) has the step-by-step guide, the quick reference and the architecture, including the message formats. The console screenshots in `docs/images/` carry their date in the caption. Retake them when the console changes. Engineering standards that apply to every repo live in the user-level agent toolkit, not here.

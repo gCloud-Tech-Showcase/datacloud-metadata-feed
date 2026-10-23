@@ -38,7 +38,17 @@ The data product's **Contract** tab stays empty. It holds Knowledge Catalog's ow
 
 Open `orders` from the data product's **Assets** tab.
 
-On the `orders` entry, the **Details** tab shows `Schema contract` and `Asset readiness` among the aspects. The same entry also carries the scan results that `tofu apply` started (verified on 2026-10-20):
+![The Assets tab of the Sales Orders data product, listing customer_orders, customers and orders](images/data-product-assets.png)
+
+*The three assets of the Sales Orders data product. Console on 2026-10-23.*
+
+On the `orders` entry, the **Details** tab shows `Schema contract` and `Asset readiness` among the aspects.
+
+![The Schema contract aspect on the orders entry, with version 1 and five fields](images/schema-contract-aspect.png)
+
+*The schema contract on `orders`: the agreed name, type and mode of each column. Console on 2026-10-23.*
+
+The same entry also carries the scan results that `tofu apply` started (verified on 2026-10-23):
 
 | Tab | Scan | Shows |
 | --- | --- | --- |
@@ -71,6 +81,10 @@ FROM `${var.project_id}.raw.thelook_orders`
 Do this before you run `show-feed.sh`, which acknowledges the messages it prints. The feed sends a plain Pub/Sub message, so you can read it like any other.
 
 In the console, open **Pub/Sub**, then **Subscriptions**, then `schema-changes-demo`. On the **Messages** tab, leave **Enable ack messages** cleared and click **Pull**. The console decodes the payload into **Message body**, and lists the attributes next to it (verified on 2026-10-23).
+
+![The Messages tab of the schema-changes-demo subscription, showing one pulled feed message with its attribute keys and JSON body](images/pubsub-feed-message.png)
+
+*The feed message for the `orders` update in Step 1. Console on 2026-10-23.*
 
 In the terminal, pull the raw message:
 
@@ -161,6 +175,10 @@ FROM `${var.project_id}.raw.thelook_orders`
 
 To see the new aspect values, refresh both entries in the console.
 
+![The Asset readiness aspect on the orders entry: BLOCKED, with a breaking COLUMN_DROPPED reason and a non-breaking COLUMN_ADDED reason](images/asset-readiness-blocked.png)
+
+*`Asset readiness` on `orders`: one reason per difference from the contract. Console on 2026-10-23.*
+
 ```bash
 ./scripts/show-feed.sh readiness-changes
 ./scripts/show-feed.sh notifications
@@ -187,6 +205,10 @@ FAILED	column `num_of_item` configured in DataQualityRule doesn't exist in entit
 
 The **Data Quality** tab on the `orders` entry does not change. It shows the latest published result, and a failed run publishes none, so the tab still shows the last successful run at 100% (verified on 2026-10-23).
 
+![The Data Quality tab on the orders entry, still showing 100% and 6 passed rules from the last successful run](images/data-quality-after-drop.png)
+
+*The **Data Quality** tab after `num_of_item` was dropped. It still shows the last successful run. Console on 2026-10-23.*
+
 Compare the two signals. The feed flagged the change within seconds and named the column. The scan only catches it when it runs, and then no rule gives a result.
 
 ---
@@ -206,6 +228,10 @@ SELECT c.user_id, c.country, CAST(COUNT(o.order_id) AS NUMERIC) AS order_count
 ```
 
 `customer_orders` is `BLOCKED` with `TYPE_CHANGED order_count`, from `INTEGER` to `NUMERIC`. The data product now lists two blocked assets, and the stewards get a `BREAKING` notification for `customer_orders`.
+
+![The Aspects tab of the Sales Orders data product: Product readiness BLOCKED, with reasons for marketing.customer_orders and sales.orders](images/data-product-blocked.png)
+
+*`Product readiness` on the data product after Step 3, naming both blocked assets. Console on 2026-10-23.*
 
 ---
 
