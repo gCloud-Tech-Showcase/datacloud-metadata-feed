@@ -3,7 +3,7 @@
 # Every variable has a working default, so a clone is `setup.sh` then `apply`
 # with no tfvars file. `project_id`'s default below is the SINGLE SOURCE OF
 # TRUTH for this domain repo: providers, resources, derived bucket names and
-# scripts/setup.sh all read from it. Never restate a project ID or bucket name
+# infra/scripts/setup.sh all read from it. Never restate a project ID or bucket name
 # anywhere else — derive it.
 # =============================================================================
 
@@ -14,36 +14,29 @@ variable "project_id" {
 }
 
 variable "region" {
-  description = "The GCP region for regional resources (Dataform, and the bucket if the unstructured add-on is used)"
+  description = "Region for every resource: datasets, aspect types, data product, feeds and functions. A data product and its assets must share one location."
   type        = string
   default     = "us-central1"
 }
 
-variable "dataset_location" {
-  description = "BigQuery dataset location (multi-region). Also where setup.sh puts the state bucket — state is the one artifact that can't be rebuilt, so it gets the most durable home."
+variable "data_product_owner" {
+  description = "Owner email shown on the data product. Defaults to the deployer's email when the credentials expose it, otherwise to the functions' service account."
   type        = string
-  default     = "US"
+  default     = null
 }
 
-# [visibility:public]
-variable "git_repo_url" {
-  description = "GitHub repository URL the managed Dataform repo pulls from. HTTPS because the link is anonymous and tokenless, which only reaches a public repo."
+variable "data_product_access_groups" {
+  description = "Optional access groups on the data product, keyed by access group ID. Each points at an existing Google Group. Leave empty to run the demo without groups: notifications are still published, with no recipient."
+  type = map(object({
+    display_name = string
+    description  = optional(string, "")
+    google_group = string
+  }))
+  default = {}
+}
+
+variable "notify_access_group" {
+  description = "Access group ID whose Google Group is named as the recipient of schema change notifications"
   type        = string
-  default     = "https://github.com/gCloud-Tech-Showcase/datacloud-metadata-feed.git"
+  default     = "data-stewards"
 }
-
-
-
-
-variable "run_pipeline_on_apply" {
-  description = "Trigger a Dataform run (compile main + workflow invocation as the runner SA) as the final step of apply and block until it finishes, so a fresh apply leaves the domain fully built. Runs once on first apply; set false to skip."
-  type        = bool
-  default     = true
-}
-
-variable "enable_scheduled_runs" {
-  description = "Create the Dataform release + workflow configs that compile and run the pipeline hourly. Off by default so a clone-and-apply is a one-shot build with no recurring cost on a forker's project; set true for a self-refreshing deployment."
-  type        = bool
-  default     = false
-}
-

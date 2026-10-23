@@ -1,5 +1,5 @@
 name: Data quality
-description: Data that's wrong, missing, or inconsistent while the pipeline itself runs fine.
+description: Data or readiness that is wrong, missing, or inconsistent while everything runs.
 title: "[Data quality] "
 labels: ["type:data-quality"]
 body:
@@ -28,9 +28,9 @@ body:
     attributes:
       label: Is there a check for this?
       options:
-        - "No — nothing would catch it"
-        - "Yes — an assertion exists and passed anyway"
-        - "Yes — a monitoring view shows it"
+        - "No, nothing would catch it"
+        - "Yes, a schema contract or data quality scan exists and passed anyway"
+        - "Yes, contract_monitoring shows it"
         - "Not sure"
     validations:
       required: false

@@ -15,14 +15,26 @@ terraform {
       source  = "hashicorp/google-beta"
       version = ">= 6.50.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = ">= 2.4.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.6.0"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.11.0"
+    }
   }
 
   # State lives in gs://<project_id>-tfstate (versioned, private). The bucket is
   # deliberately NOT named here: backend blocks cannot read variables or locals,
   # so hardcoding it would duplicate project_id and break forks. Instead
-  # scripts/setup.sh derives it from var.project_id's default and injects it:
+  # infra/scripts/setup.sh derives it from var.project_id's default and injects it:
   #   tofu init -backend-config="bucket=<project_id>-tfstate"
-  # Run scripts/setup.sh before the first apply — it creates the bucket too.
+  # Run infra/scripts/setup.sh before the first apply — it creates the bucket too.
   backend "gcs" {
     prefix = "tf/infra"
   }

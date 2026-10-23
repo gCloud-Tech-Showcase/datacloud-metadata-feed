@@ -1,68 +1,95 @@
-# Schema Drift Alerts with Metadata Change Feeds
+# Data Cloud: Schema Drift Alerts with Metadata Change Feeds
 
-<!-- SKELETON: replace the content, keep the structure. This is the
-     human-facing walkthrough; AGENTS.md is the agent-facing one. -->
+Catch a breaking schema change before it reaches the teams that use the data. A producer changes a golden table in BigQuery. Within seconds, Knowledge Catalog marks the table and its data product `BLOCKED`, gives the reason, and notifies the data product's stewards.
 
-Standalone and self-contained — clone it, point it at your own GCP project, and
-`tofu apply` builds everything including the data.
+There is no polling and no scheduled check. [Metadata change feeds](https://cloud.google.com/knowledge-catalog/docs/metadata-change-feeds-overview) push every catalog change to Pub/Sub, and three small Cloud Functions do the rest. Clone the repo, point it at your own GCP project, and run `tofu apply`.
+
+- **One data product, three assets:** two tables and one view, built from a copy of [theLook eCommerce](https://console.cloud.google.com/marketplace/product/bigquery-public-data/thelook-ecommerce)
+- **A schema contract on each asset:** the columns, types and modes that producers and consumers agreed
+- **Seconds from change to alert:** a dropped column, a changed type or a changed mode blocks the asset and the data product
+- **A history in BigQuery:** every readiness change and every notification, ready to query
+
+See [`docs/`](docs/README.md) for the step-by-step guide and [`docs/quick.md`](docs/quick.md) for copy-paste commands.
 
 ## Architecture
 
-<!-- A short diagram or bullet flow: source → stages → outputs. -->
+What happens when you change a table's schema:
+
+```mermaid
+flowchart LR
+    A["You change a table<br/>BigQuery"] --> B["The catalog sees the change<br/>Metadata change feed"]
+    B --> C["The schema is compared with its contract<br/>Cloud Function"]
+    C --> D["The table and its data product<br/>become READY or BLOCKED<br/>Knowledge Catalog"]
+    D --> E["The stewards are notified<br/>Pub/Sub"]
+```
+
+How the pieces are connected, step by step: [`docs/architecture.md`](docs/architecture.md).
 
 ## Prerequisites
 
-1. **A GCP project with billing** (one-time, created out-of-band):
-   ```bash
-   gcloud projects create datacloud-metadata-feed --organization=<YOUR_ORG_ID>
-   gcloud billing projects link datacloud-metadata-feed --billing-account=<YOUR_BILLING_ACCOUNT>
-   gcloud auth application-default login
-   ```
-2. **[OpenTofu](https://opentofu.org) ≥ 1.6** (`tofu`). Terraform ≥ 1.6 works too.
-3. `curl`, `python3`, `gsutil` — all ship with `gcloud`.
+| Requirement | Notes |
+| --- | --- |
+| A GCP project with billing | Create it once, before the first apply. The commands are below. |
+| [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) | Provides `gcloud` and `bq`. Tofu calls both during the apply. |
+| [OpenTofu](https://opentofu.org) 1.6 or later | `setup.sh` runs `tofu init`. |
+| `curl` and `python3` | `scripts/verify.sh` and `scripts/show-feed.sh` use them. |
 
-No GitHub token is needed: the Dataform repository pulls over an *anonymous* git link, which works because this repo is public.
+The project ID must be globally unique. Create the project, then log in twice. Tofu uses the application default credentials. `bq`, `gcloud` and the scripts use the CLI login.
+
+```bash
+PROJECT_ID=<your-project-id>
+gcloud projects create "$PROJECT_ID" --organization=<YOUR_ORG_ID>
+gcloud billing projects link "$PROJECT_ID" --billing-account=<YOUR_BILLING_ACCOUNT>
+gcloud auth login
+gcloud auth application-default login
+```
+
+Set `project_id`'s default in `infra/variables.tf` to your project ID. That one value drives the providers, the resources, the bucket names and `setup.sh`.
 
 ## Quickstart
 
 ```bash
-./infra/scripts/setup.sh   # one-time per project: APIs + state bucket + tofu init
-cd infra && tofu apply     # zero required variables — every one has a default
+./infra/scripts/setup.sh   # one time per project: APIs, state bucket, tofu init
+cd infra && tofu apply     # zero required variables
 ```
 
-`setup.sh` handles what Terraform can't bootstrap itself: it enables the Cloud
-Resource Manager / Service Usage APIs, creates a **versioned** state bucket at
-`gs://datacloud-metadata-feed-tfstate`, and runs `tofu init` against it. Re-running is a
-safe no-op.
+The first apply waits for IAM to propagate and for the new feeds to start publishing, then runs the first data scans.
 
-To deploy elsewhere, change `project_id`'s default in `infra/variables.tf` —
-that one value drives everything — or pass `--project=<id>` to `setup.sh`.
-
-> **State lives remotely** and versioned, so a bad apply is recoverable. Each
-> fork gets its own bucket in its own project; nothing is shared.
+Notifications go to the data product's `data-stewards` access group. This group is optional. To use your own Google Groups, copy `infra/terraform.tfvars.example` to `infra/terraform.tfvars` and set the groups there. Without it, notifications are still published, with no recipient.
 
 ## Verify
 
-```sql
--- replace with this domain's real checks
-SELECT * FROM `serving.<table>` LIMIT 10;
-SELECT * FROM `assertions.<assertion>`;   -- empty = healthy
+```bash
+./scripts/verify.sh --expect READY   # every asset and the data product are READY
+./scripts/verify.sh --smoke          # a throwaway table with a broken contract becomes BLOCKED
 ```
+
+## Try it
+
+Follow [Schema Changes](docs/01-schema-changes.md). You break the contracts on purpose, watch the catalog react, then fix them.
 
 ## What gets created
 
+Everything is in `us-central1`.
+
 | Resource | Notes |
 | --- | --- |
-| BigQuery datasets | one per medallion stage, plus `assertions` |
-| Dataform repository | git-linked anonymously, pulls from `main` |
-| Runner service account | workflow invocations execute as it |
-| First-run trigger | `run_pipeline_on_apply` builds everything at the end of apply |
+| BigQuery datasets `raw`, `sales`, `marketing` | theLook copies, the two golden tables and the consumer view |
+| BigQuery dataset `contract_monitoring` | `readiness_log`, `current_readiness` and `notification_log` |
+| Data product `sales-orders` | Three assets: `sales.orders`, `sales.customers`, `marketing.customer_orders` |
+| Aspect types `schema-contract`, `asset-readiness`, `product-readiness` | The schema contracts, and the readiness of each asset and of the data product |
+| Feeds `schema-changes`, `readiness-changes` | Each feed publishes to a Pub/Sub topic of the same name |
+| Cloud Functions `check-contract`, `rollup-product`, `notify-stewards` | Python 3.12. Pub/Sub pushes feed messages to them. |
+| Topic `schema-change-notifications` | The steward notifications |
+| `-demo` pull subscriptions | One per topic, so you can read the messages yourself. Nothing else reads them. |
+| Topic `feed-dead-letter` | Messages that failed 5 deliveries |
+| Profile, quality and insights scans | On all three assets, with results published to the catalog |
+| Service accounts | `drift-functions`, `function-builder`, `feed-push-invoker`, `data-scanner` |
+| Bucket `<project>-function-source` | The zipped function source |
 
-## Data quality
+## Known limitations
 
-`definitions/assertions/` hard-fails the workflow when a healthy pipeline would
-return zero rows. `definitions/monitoring/` surfaces rows that are *expected*
-sometimes — model drift, known-imperfect upstream data — without blocking a run.
+- A dropped table does not block its data product. The feed sends no message for `DROP TABLE` ([#3](https://github.com/gCloud-Tech-Showcase/datacloud-metadata-feed/issues/3)).
 
 ## Cleanup
 
@@ -70,10 +97,13 @@ sometimes — model drift, known-imperfect upstream data — without blocking a 
 cd infra && tofu destroy
 ```
 
-Two things are deliberately left behind, because Tofu didn't create them: the
-project and the state bucket. Remove them by hand if you want the project gone:
+These stay after `tofu destroy`:
 
-```bash
-gcloud storage rm -r gs://datacloud-metadata-feed-tfstate
-gcloud projects delete datacloud-metadata-feed
-```
+| Left behind | Why | Remove with |
+| --- | --- | --- |
+| The project | Tofu did not create it | `gcloud projects delete "$PROJECT_ID"` |
+| `gs://<project>-tfstate` | It holds the state that `destroy` uses | `gcloud storage rm -r "gs://$PROJECT_ID-tfstate"` |
+| Enabled APIs | Tofu leaves them on so that a shared project does not break | `gcloud services disable`, if you want |
+| `gs://gcf-v2-sources-<project-number>-us-central1` and the `gcf-artifacts` repository | Cloud Functions creates them for its builds | `gcloud storage rm -r` and `gcloud artifacts repositories delete gcf-artifacts --location=us-central1` |
+
+Deleting the project removes all of them.

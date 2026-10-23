@@ -1,18 +1,23 @@
-# No variables are REQUIRED — every one has a default. A tfvars file is optional.
-# Point the domain at your own GCP project by overriding project_id (via this file,
-# `-var`, or `TF_VAR_project_id`); the rest are fine as-is.
+# Copy to terraform.tfvars (gitignored) to point the demo at your own Google
+# Groups. Every variable has a default, so this file is optional: without
+# access groups, notifications are still published, with no recipient.
 
-# --- Optional overrides (defaults shown) ---
+# data_product_access_groups = {
+#   data-owners = {
+#     display_name = "Data owners"
+#     description  = "Accountable for the product and approve schema contract changes"
+#     google_group = "sales-orders-owners@example.com"
+#   }
+#   data-stewards = {
+#     display_name = "Data stewards"
+#     description  = "Notified when an asset breaks its schema contract"
+#     google_group = "sales-orders-stewards@example.com"
+#   }
+#   consumers = {
+#     display_name = "Consumers"
+#     description  = "Teams that build on the data product"
+#     google_group = "sales-orders-consumers@example.com"
+#   }
+# }
 
-# project_id       = "datacloud-metadata-feed"
-# region           = "us-central1"
-# dataset_location = "US"
-# git_repo_url     = "https://github.com/gCloud-Tech-Showcase/datacloud-metadata-feed.git"
-
-# Run the Dataform pipeline as the final step of apply (blocks ~2-4 min until it
-# finishes). Needs curl + python3 (bundled with gcloud). Set false to skip.
-# run_pipeline_on_apply = true
-
-# Create the hourly release + workflow schedule (self-refreshing pipeline). Off by
-# default: a clone-and-apply is a one-shot build with no recurring BQML retrain.
-# enable_scheduled_runs = false
+# notify_access_group = "data-stewards"
