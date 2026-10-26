@@ -230,19 +230,16 @@ The code depends on these behaviours (verified on 2026-10-20 and 2026-10-21).
 | Behaviour | Consequence in this repo |
 | --- | --- |
 | Every BigQuery table update lists all system aspects in `updatedAspects`, including `schema`, even when the schema did not change. The message never says what changed. | `check-contract` always compares against the contract. It writes `asset-readiness` only when the result differs from the current aspect. |
-| A custom aspect update lists only that aspect. | `check-contract` ignores messages without `schema` or `schema-contract`. |
 | On updates that BigQuery makes, the message's `entryName` is an opaque ID that `GetEntry` rejects. | The functions rebuild the entry name from `fullQualifiedName`. |
 | Filters on `projects/dataplex-types/...` were accepted but matched nothing. | Feed filters use the project-number form `projects/655216118709/...`. |
-| Creating a feed before the service agent's publisher grant propagates fails with `code 13`. | `time_sleep.dataplex_publisher_propagation` waits 90 seconds. |
 | A new feed can take up to 10 minutes to start publishing. | `time_sleep.feed_activation` delays the contracts on the first apply. |
 | `DROP TABLE` produced no message on the aspect-filtered feed. | A dropped asset does not block its data product. Not built (see [#3](https://github.com/gCloud-Tech-Showcase/datacloud-metadata-feed/issues/3)). |
 
-Two related behaviours outside the feeds:
+One related behaviour outside the feeds:
 
 | Behaviour | Consequence in this repo |
 | --- | --- |
 | API-created insights scans publish results, but the console's Insights tab stays empty until the table has `dataplex-data-documentation-published-*` labels. `CREATE OR REPLACE` drops labels. | Each `CREATE OR REPLACE` statement sets the labels in `OPTIONS`. Profile and quality results show without labels. |
-| Profile and quality scans failed with an impersonation error for more than 60 seconds after the grant to the Knowledge Catalog service agent. IAM calls it the Dataplex service agent. | `time_sleep.scanner_iam_propagation` waits 3 minutes. |
 
 ---
 
