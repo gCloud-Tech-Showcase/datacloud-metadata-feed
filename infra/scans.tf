@@ -171,6 +171,16 @@ resource "google_dataplex_datascan" "scan" {
 
   labels = { domain = "metadata-feed" }
 
+  # With the Gemini Data Analytics API off, creating the insights scan on the
+  # view took 13 to 21 minutes on a fresh project (2026-10-26). Tofu gave up
+  # after its default 5 minutes while the create carried on, so the scan never
+  # reached state and every later apply failed with 409 already exists. With
+  # the API on, every scan was created in under 3 minutes. The longer timeout
+  # keeps a slow create from leaving the state behind.
+  timeouts {
+    create = "30m"
+  }
+
   depends_on = [
     terraform_data.golden_table,
     terraform_data.customer_orders_view,

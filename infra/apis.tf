@@ -11,17 +11,19 @@ resource "google_project_service" "apis" {
     "cloudresourcemanager.googleapis.com", # provider manages google_project_service via CRM
     "serviceusage.googleapis.com",         # enable/disable of the services below
 
-    "bigquery.googleapis.com",         # source copies, golden tables, view, readiness log
-    "datalineage.googleapis.com",      # lineage from raw to sales to marketing
-    "dataplex.googleapis.com",         # Knowledge Catalog: aspects, data product, metadata feeds
-    "pubsub.googleapis.com",           # feed topics, push and demo subscriptions
-    "cloudfunctions.googleapis.com",   # check-contract, rollup-product, notify-stewards
-    "run.googleapis.com",              # Cloud Functions Gen2 run on Cloud Run
-    "cloudbuild.googleapis.com",       # builds the function containers
-    "artifactregistry.googleapis.com", # stores the function containers
-    "storage.googleapis.com",          # function source bucket
-    "iam.googleapis.com",              # function and invoker service accounts
-    "cloudaicompanion.googleapis.com", # Gemini for Google Cloud, used by the insights scans
+    "bigquery.googleapis.com",            # source copies, golden tables, view, readiness log
+    "datalineage.googleapis.com",         # lineage from raw to sales to marketing
+    "dataplex.googleapis.com",            # Knowledge Catalog: aspects, data product, metadata feeds
+    "pubsub.googleapis.com",              # feed topics, push and demo subscriptions
+    "cloudfunctions.googleapis.com",      # check-contract, rollup-product, notify-stewards
+    "run.googleapis.com",                 # Cloud Functions Gen2 run on Cloud Run
+    "cloudbuild.googleapis.com",          # builds the function containers
+    "artifactregistry.googleapis.com",    # stores the function containers
+    "storage.googleapis.com",             # function source bucket
+    "iam.googleapis.com",                 # function and invoker service accounts
+    "cloudaicompanion.googleapis.com",    # Gemini for Google Cloud, used by the insights scans
+    "geminidataanalytics.googleapis.com", # an insights scan create failed without it on a fresh project
+    "bigqueryunified.googleapis.com",     # the console's Insights tab asks for it before it shows insights
   ])
 
   service = each.value
